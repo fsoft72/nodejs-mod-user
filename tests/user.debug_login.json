@@ -1,0 +1,46 @@
+{
+	"run-once": true,
+	"actions": [
+		{
+			"method": "post",
+			"url": "/api/user/login",
+			"params": {
+				"email": "fabio.rotondo.test@gmail.com",
+				"password": "ciao123"
+			},
+			"fields": [
+				[
+					"access_token",
+					"_fabio_test_token"
+				],
+				[
+					"access_token",
+					"token"
+				]
+			]
+		},
+		{
+			"method": "get",
+			"url": "/api/user/me",
+			"auth": true,
+			"fields": [
+				[
+					"user._id",
+					"_fabio_test_uid"
+				]
+			]
+		},
+		{
+			"action": "batch_set",
+			"name": "switch_fabio",
+			"actions": [
+				{
+					"title": "Switching to Fabio",
+					"action": "copy",
+					"from": "_fabio_token",
+					"to": "token"
+				}
+			]
+		}
+	]
+}

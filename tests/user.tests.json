@@ -1,0 +1,362 @@
+{
+	"system": {
+		"base_url": "http://localhost:12000",
+		"authorization_template": "Bearer %(token)s"
+	},
+	"actions": [
+		{
+			"method": "post",
+			"url": "/api/user/register",
+			"title": "Registering a new user",
+			"params": {
+				"email": "mario.rossi@gmail.com",
+				"password": "ciao123",
+				"name": "Mario",
+				"lastname": "Rossi"
+			},
+			"tests": [
+				{
+					"field": "code",
+					"mode": ">",
+					"value": "0"
+				}
+			],
+			"fields": [
+				"code"
+			]
+		},
+		{
+			"method": "get",
+			"url": "/api/user/register/activate/%(code)s",
+			"tests": [
+				{
+					"field": "user.name",
+					"mode": "EQUAL",
+					"value": "Mario"
+				}
+			]
+		},
+		{
+			"method": "post",
+			"url": "/api/user/token",
+			"content": "form",
+			"params": {
+				"username": "mario.rossi@gmail.com",
+				"password": "ciao123"
+			},
+			"tests": [
+				{
+					"field": "access_token",
+					"mode": ">",
+					"value": 0
+				},
+				{
+					"field": "token_type",
+					"mode": "EQUAL",
+					"value": "bearer"
+				}
+			],
+			"fields": [
+				[
+					"access_token",
+					"token"
+				]
+			]
+		},
+		{
+			"method": "get",
+			"url": "/api/user/me",
+			"auth": true,
+			"tests": [
+				{
+					"field": "user.name",
+					"mode": "EQUAL",
+					"value": "Mario"
+				}
+			],
+			"fields": [
+				[
+					"user._id",
+					"mario_uid"
+				]
+			]
+		},
+		{
+			"method": "post",
+			"url": "/api/user/login",
+			"params": {
+				"email": "fabio.rotondo.test@gmail.com",
+				"password": "ciao123"
+			},
+			"fields": [
+				[
+					"access_token",
+					"token"
+				]
+			]
+		},
+		{
+			"method": "get",
+			"url": "/api/user/me",
+			"auth": true,
+			"tests": [
+				{
+					"field": "user.name",
+					"mode": "EQUAL",
+					"value": "Fabio"
+				}
+			],
+			"fields": [
+				[
+					"user._id",
+					"fabio_uid"
+				]
+			]
+		},
+		{
+			"method": "post",
+			"url": "/api/user/perms_set",
+			"auth": true,
+			"params": {
+				"uid": "%(mario_uid)s",
+				"perms": {
+					"system": [
+						"admin"
+					]
+				}
+			}
+		},
+		{
+			"method": "post",
+			"url": "/api/user/perms_set",
+			"auth": true,
+			"params": {
+				"uid": "%(fabio_uid)s",
+				"perms": {
+					"user": [
+						"list"
+					]
+				}
+			}
+		},
+		{
+			"method": "get",
+			"url": "/api/user/logout",
+			"auth": true
+		},
+		{
+			"method": "post",
+			"title": "This perms_set should fail",
+			"url": "/api/user/perms_set",
+			"auth": true,
+			"params": {
+				"uid": "%(mario_uid)s",
+				"perms": {
+					"system": [
+						"admin"
+					]
+				}
+			},
+			"status_code": 403
+		},
+		{
+			"method": "post",
+			"url": "/api/user/login",
+			"params": {
+				"email": "fabio.rotondo.test@gmail.com",
+				"password": "ciao123"
+			},
+			"fields": [
+				[
+					"access_token",
+					"token"
+				]
+			]
+		},
+		{
+			"method": "get",
+			"url": "/api/user/me",
+			"auth": true,
+			"tests": [
+				{
+					"field": "user.perms.user.[0]",
+					"mode": "EQUAL",
+					"value": "list"
+				}
+			]
+		},
+		{
+			"title": "Login as Mario",
+			"method": "post",
+			"url": "/api/user/login",
+			"params": {
+				"email": "mario.rossi@gmail.com",
+				"password": "ciao123"
+			},
+			"fields": [
+				[
+					"access_token",
+					"token"
+				]
+			]
+		},
+		{
+			"title": "Testing system.admin perms",
+			"method": "post",
+			"url": "/api/user/perms_set",
+			"auth": true,
+			"params": {
+				"uid": "%(fabio_uid)s",
+				"perms": {
+					"system": [
+						"admin"
+					]
+				}
+			}
+		},
+		{
+			"method": "get",
+			"url": "/api/user/logout",
+			"auth": true
+		},
+		{
+			"title": "Login as Fabio",
+			"method": "post",
+			"url": "/api/user/login",
+			"params": {
+				"email": "fabio.rotondo.test@gmail.com",
+				"password": "ciao123"
+			},
+			"fields": [
+				[
+					"access_token",
+					"token"
+				]
+			]
+		},
+		{
+			"method": "get",
+			"url": "/api/user/me",
+			"auth": true,
+			"tests": [
+				{
+					"field": "user.perms.system.[0]",
+					"mode": "EQUAL",
+					"value": "admin"
+				}
+			]
+		},
+		{
+			"method": "post",
+			"url": "/api/user/perms_set",
+			"auth": true,
+			"params": {
+				"uid": "%(mario_uid)s",
+				"perms": {
+					"system": [
+						"admin"
+					]
+				}
+			}
+		},
+		{
+			"method": "get",
+			"url": "/api/user/logout",
+			"auth": true
+		},
+		{
+			"method": "post",
+			"url": "/api/user/password-forgot",
+			"params": {
+				"email": "mario.rossiXXX@gmail.com"
+			},
+			"status_code": 401
+		},
+		{
+			"method": "post",
+			"url": "/api/user/password-forgot",
+			"params": {
+				"email": "mario.rossi@gmail.com"
+			},
+			"fields": [
+				"code"
+			]
+		},
+		{
+			"method": "post",
+			"url": "/api/user/password-reset",
+			"params": {
+				"code": "%(code)s",
+				"password": "ciao1234"
+			}
+		},
+		{
+			"method": "post",
+			"title": "Login with old password",
+			"url": "/api/user/login",
+			"params": {
+				"email": "mario.rossi@gmail.com",
+				"password": "ciao123"
+			},
+			"status_code": 401
+		},
+		{
+			"method": "post",
+			"url": "/api/user/login",
+			"params": {
+				"email": "mario.rossi@gmail.com",
+				"password": "ciao1234"
+			},
+			"fields": [
+				[
+					"access_token",
+					"token"
+				]
+			]
+		},
+		{
+			"method": "post",
+			"url": "/api/user/info_add",
+			"auth": true,
+			"params": {
+				"key": "test",
+				"data": {
+					"name": "test 01",
+					"value": "my test",
+					"hello": "world"
+				}
+			}
+		},
+		{
+			"method": "get",
+			"url": "/api/user/me",
+			"auth": true,
+			"tests": [
+				{
+					"field": "user.extra.test.name",
+					"value": "test 01"
+				}
+			]
+		},
+		{
+			"method": "delete",
+			"url": "/api/user/info_del",
+			"auth": true,
+			"params": {
+				"key": "test"
+			}
+		},
+		{
+			"method": "get",
+			"url": "/api/user/me",
+			"auth": true,
+			"tests": [
+				{
+					"field": "user.extra.test",
+					"mode": "EQUAL",
+					"value": "__@@_invalid_@@__"
+				}
+			]
+		}
+	]
+}

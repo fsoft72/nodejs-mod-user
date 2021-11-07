@@ -1,0 +1,183 @@
+{
+	"system": {
+		"base_url": "http://localhost:12000",
+		"authorization_template": "Bearer %(token)s"
+	},
+	"actions": [
+		{
+			"method": "post",
+			"url": "/api/user/login",
+			"params": {
+				"email": "fabio.rotondo.test@gmail.com",
+				"password": "ciao123"
+			},
+			"fields": [
+				[
+					"access_token",
+					"token"
+				]
+			]
+		},
+		{
+			"method": "get",
+			"url": "/api/user/me",
+			"auth": true,
+			"tests": [
+				{
+					"field": "user.name",
+					"mode": "EQUAL",
+					"value": "Fabio"
+				}
+			],
+			"fields": [
+				[
+					"user._id",
+					"fabio_uid"
+				]
+			]
+		},
+		{
+			"method": "post",
+			"url": "/api/tag/create",
+			"auth": true,
+			"params": {
+				"name": "student"
+			}
+		},
+		{
+			"method": "post",
+			"url": "/api/tag/create",
+			"auth": true,
+			"params": {
+				"name": "trainer"
+			}
+		},
+		{
+			"method": "post",
+			"url": "/api/user/create",
+			"auth": true,
+			"params": {
+				"email": "tagme.user@gmail.com",
+				"password": "tag123"
+			},
+			"fields": [
+				[
+					"user._id",
+					"tag_user_id"
+				]
+			]
+		},
+		{
+			"method": "post",
+			"url": "/api/user/tag",
+			"auth": true,
+			"params": {
+				"id_user": "%(tag_user_id)s",
+				"tags": [
+					"student",
+					"hello",
+					"world",
+					"ciao",
+					"mondo"
+				]
+			},
+			"tests": [
+				{
+					"field": "user.tags",
+					"mode": "LEN",
+					"value": 1
+				},
+				{
+					"field": "user.tags[0]",
+					"value": "student"
+				}
+			]
+		},
+		{
+			"method": "post",
+			"url": "/api/user/tag",
+			"auth": true,
+			"params": {
+				"id_user": "%(tag_user_id)s",
+				"tags": [
+					"student",
+					"trainer"
+				]
+			},
+			"tests": [
+				{
+					"field": "user.tags",
+					"mode": "LEN",
+					"value": 2
+				},
+				{
+					"field": "user.tags[0]",
+					"value": "student"
+				}
+			]
+		},
+		{
+			"method": "get",
+			"url": "/api/tag/list"
+		},
+		{
+			"method": "get",
+			"url": "/api/tag/list",
+			"params": {
+				"module": "user"
+			}
+		},
+		{
+			"method": "post",
+			"url": "/api/user/tag",
+			"auth": true,
+			"params": {
+				"id_user": "%(fabio_uid)s",
+				"tags": [
+					"trainer"
+				]
+			},
+			"tests": [
+				{
+					"field": "user.tags",
+					"mode": "LEN",
+					"value": 1
+				},
+				{
+					"field": "user.tags[0]",
+					"value": "trainer"
+				}
+			]
+		},
+		{
+			"method": "get",
+			"url": "/api/user/list",
+			"auth": true,
+			"params": {
+				"tag": "trainer"
+			},
+			"tests": [
+				{
+					"field": "users",
+					"mode": "LEN",
+					"value": 2
+				}
+			]
+		},
+		{
+			"method": "get",
+			"url": "/api/user/list",
+			"auth": true,
+			"params": {
+				"tag": "student"
+			},
+			"tests": [
+				{
+					"field": "users",
+					"mode": "LEN",
+					"value": 1
+				}
+			]
+		}
+	]
+}
