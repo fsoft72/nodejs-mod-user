@@ -1,0 +1,13 @@
+{
+	"system": {
+		"base_url": "http://localhost:12000",
+		"authorization_template": "Bearer %(token)s"
+	},
+	"actions": [
+		{
+			"action": "include",
+			"filename": "user.tests.json",
+			"exec": true
+		}
+	]
+}

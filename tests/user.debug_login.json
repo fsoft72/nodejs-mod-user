@@ -4,14 +4,16 @@
 		{
 			"method": "post",
 			"url": "/api/user/login",
+			"auth": false,
 			"params": {
-				"email": "fabio.rotondo.test@gmail.com",
-				"password": "ciao123"
+				"email": "admin@gmail.com",
+				"password": "Ciao123!",
+				"recaptcha": "ciao"
 			},
 			"fields": [
 				[
 					"access_token",
-					"_fabio_test_token"
+					"admin_token"
 				],
 				[
 					"access_token",
@@ -22,22 +24,21 @@
 		{
 			"method": "get",
 			"url": "/api/user/me",
-			"auth": true,
 			"fields": [
 				[
-					"user._id",
-					"_fabio_test_uid"
+					"user.id",
+					"admin_uid"
 				]
 			]
 		},
 		{
 			"action": "batch_set",
-			"name": "switch_fabio",
+			"name": "switch_admin",
 			"actions": [
 				{
-					"title": "Switching to Fabio",
+					"title": "Switching to Admin",
 					"action": "copy",
-					"from": "_fabio_token",
+					"from": "admin_token",
 					"to": "token"
 				}
 			]

@@ -7,27 +7,33 @@
 		{
 			"method": "post",
 			"url": "/api/user/register",
+			"auth": false,
 			"title": "Registering a new user",
 			"params": {
-				"email": "mario.rossi@gmail.com",
-				"password": "ciao123",
+				"email": "mario.rossi.test@gmail.com",
+				"password": "Ciao123!",
 				"name": "Mario",
-				"lastname": "Rossi"
+				"lastname": "Rossi TEST",
+				"recaptcha": "test"
 			},
 			"tests": [
 				{
-					"field": "code",
+					"field": "uac",
 					"mode": ">",
 					"value": "0"
 				}
 			],
 			"fields": [
-				"code"
+				[
+					"uac",
+					"code"
+				]
 			]
 		},
 		{
 			"method": "get",
 			"url": "/api/user/register/activate/%(code)s",
+			"auth": false,
 			"tests": [
 				{
 					"field": "user.name",
@@ -40,9 +46,10 @@
 			"method": "post",
 			"url": "/api/user/token",
 			"content": "form",
+			"auth": false,
 			"params": {
-				"username": "mario.rossi@gmail.com",
-				"password": "ciao123"
+				"username": "mario.rossi.test@gmail.com",
+				"password": "Ciao123!"
 			},
 			"tests": [
 				{
@@ -66,7 +73,6 @@
 		{
 			"method": "get",
 			"url": "/api/user/me",
-			"auth": true,
 			"tests": [
 				{
 					"field": "user.name",
@@ -76,8 +82,8 @@
 			],
 			"fields": [
 				[
-					"user._id",
-					"mario_uid"
+					"user.id",
+					"mario_id_user"
 				]
 			]
 		},
@@ -85,8 +91,9 @@
 			"method": "post",
 			"url": "/api/user/login",
 			"params": {
-				"email": "fabio.rotondo.test@gmail.com",
-				"password": "ciao123"
+				"email": "admin@gmail.com",
+				"password": "Ciao123!",
+				"recaptcha": "ciao"
 			},
 			"fields": [
 				[
@@ -103,13 +110,13 @@
 				{
 					"field": "user.name",
 					"mode": "EQUAL",
-					"value": "Fabio"
+					"value": "Johnny"
 				}
 			],
 			"fields": [
 				[
-					"user._id",
-					"fabio_uid"
+					"user.id",
+					"admin_id_user"
 				]
 			]
 		},
@@ -118,7 +125,7 @@
 			"url": "/api/user/perms_set",
 			"auth": true,
 			"params": {
-				"uid": "%(mario_uid)s",
+				"id_user": "%(mario_id_user)s",
 				"perms": {
 					"system": [
 						"admin"
@@ -131,7 +138,7 @@
 			"url": "/api/user/perms_set",
 			"auth": true,
 			"params": {
-				"uid": "%(fabio_uid)s",
+				"id_user": "%(admin_id_user)s",
 				"perms": {
 					"user": [
 						"list"
@@ -150,7 +157,7 @@
 			"url": "/api/user/perms_set",
 			"auth": true,
 			"params": {
-				"uid": "%(mario_uid)s",
+				"id_user": "%(mario_id_user)s",
 				"perms": {
 					"system": [
 						"admin"
@@ -163,8 +170,9 @@
 			"method": "post",
 			"url": "/api/user/login",
 			"params": {
-				"email": "fabio.rotondo.test@gmail.com",
-				"password": "ciao123"
+				"email": "admin@gmail.com",
+				"password": "Ciao123!",
+				"recaptcha": "ciao"
 			},
 			"fields": [
 				[
@@ -190,8 +198,9 @@
 			"method": "post",
 			"url": "/api/user/login",
 			"params": {
-				"email": "mario.rossi@gmail.com",
-				"password": "ciao123"
+				"email": "mario.rossi.test@gmail.com",
+				"password": "Ciao123!",
+				"recaptcha": "ciao"
 			},
 			"fields": [
 				[
@@ -206,7 +215,7 @@
 			"url": "/api/user/perms_set",
 			"auth": true,
 			"params": {
-				"uid": "%(fabio_uid)s",
+				"id_user": "%(admin_id_user)s",
 				"perms": {
 					"system": [
 						"admin"
@@ -220,12 +229,13 @@
 			"auth": true
 		},
 		{
-			"title": "Login as Fabio",
+			"title": "Login as Admin",
 			"method": "post",
 			"url": "/api/user/login",
 			"params": {
-				"email": "fabio.rotondo.test@gmail.com",
-				"password": "ciao123"
+				"email": "admin@gmail.com",
+				"password": "Ciao123!",
+				"recaptcha": "ciao"
 			},
 			"fields": [
 				[
@@ -251,7 +261,7 @@
 			"url": "/api/user/perms_set",
 			"auth": true,
 			"params": {
-				"uid": "%(mario_uid)s",
+				"id_user": "%(mario_id_user)s",
 				"perms": {
 					"system": [
 						"admin"
@@ -270,16 +280,19 @@
 			"params": {
 				"email": "mario.rossiXXX@gmail.com"
 			},
-			"status_code": 401
+			"status_code": 400
 		},
 		{
 			"method": "post",
 			"url": "/api/user/password-forgot",
 			"params": {
-				"email": "mario.rossi@gmail.com"
+				"email": "mario.rossi.test@gmail.com"
 			},
 			"fields": [
-				"code"
+				[
+					"uac",
+					"code"
+				]
 			]
 		},
 		{
@@ -287,7 +300,8 @@
 			"url": "/api/user/password-reset",
 			"params": {
 				"code": "%(code)s",
-				"password": "ciao1234"
+				"email": "mario.rossi.test@gmail.com",
+				"password": "Ciao1234!"
 			}
 		},
 		{
@@ -295,17 +309,19 @@
 			"title": "Login with old password",
 			"url": "/api/user/login",
 			"params": {
-				"email": "mario.rossi@gmail.com",
-				"password": "ciao123"
+				"email": "mario.rossi.test@gmail.com",
+				"password": "Ciao123!",
+				"recaptcha": "ciao"
 			},
-			"status_code": 401
+			"status_code": 400
 		},
 		{
 			"method": "post",
 			"url": "/api/user/login",
 			"params": {
-				"email": "mario.rossi@gmail.com",
-				"password": "ciao1234"
+				"email": "mario.rossi.test@gmail.com",
+				"password": "Ciao1234!",
+				"recaptcha": "ciao"
 			},
 			"fields": [
 				[
@@ -357,6 +373,28 @@
 					"value": "__@@_invalid_@@__"
 				}
 			]
+		},
+		{
+			"method": "post",
+			"url": "/api/user/login",
+			"params": {
+				"email": "admin@gmail.com",
+				"password": "Ciao123!",
+				"recaptcha": "ciao"
+			},
+			"fields": [
+				[
+					"access_token",
+					"token"
+				]
+			]
+		},
+		{
+			"method": "delete",
+			"url": "/api/user/admin/del",
+			"params": {
+				"id_user": "%(mario_id_user)s"
+			}
 		}
 	]
 }
