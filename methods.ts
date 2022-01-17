@@ -96,7 +96,7 @@ const _valid_password = ( pwd: string, err: any, cfg: ILiweConfig ) => {
 
 export const middleware_init = ( liwe: ILiWE ) => {
 	const auth_header = async ( req: ILRequest, res: ILResponse, next: any ) => {
-		const tok = req.headers[ req.cfg.security.header ];
+		const tok = req.headers[ req?.cfg?.security?.header ];
 
 		if ( tok ) {
 			const _split = ( tok as string ).split( /bearer/i );
