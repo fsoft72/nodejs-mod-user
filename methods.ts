@@ -956,7 +956,7 @@ export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boole
 			{ type: "persistent", fields: [ "domain" ], unique: false },
 			{ type: "persistent", fields: [ "id_user" ], unique: false },
 			{ type: "persistent", fields: [ "id_upload" ], unique: true },
-		], false );
+		] );
 
 		_coll_users = await collection_init( liwe.db, COLL_USERS, [
 			{ type: "persistent", fields: [ "id" ], unique: true },
@@ -966,7 +966,7 @@ export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boole
 			{ type: "persistent", fields: [ "tags[*]" ], unique: false },
 			{ type: "persistent", fields: [ "id_upload" ], unique: false },
 			{ type: "persistent", fields: [ "deleted" ], unique: false },
-		], false );
+		] );
 
 		/*=== d2r_start user_db_init ===*/
 
