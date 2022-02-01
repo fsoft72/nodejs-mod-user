@@ -463,7 +463,7 @@ export const post_user_password_forgot = ( req: ILRequest, email: string, recapt
 				code: user.code,
 				site_name: req.cfg.app.name,
 				site_base_url: req.cfg.server.public_url,
-			}, email, req.cfg.smtp.from, null );
+			}, email, req.cfg.smtp.from, null, null );
 
 		return cback ? cback( null, code ) : resolve( code );
 		/*=== d2r_end post_user_password_forgot ===*/
