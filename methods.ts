@@ -1,6 +1,6 @@
 
 import { ILRequest, ILResponse, LCback, ILiweConfig, ILError, ILiWE } from '../../liwe/types';
-import { collection_add, collection_count, collection_find_all, collection_find_one, collection_find_one_dict, collection_find_all_dict, collection_del_one_dict, collection_del_all_dict, collection_init, mkid, prepare_filters } from '../../liwe/arangodb';
+import { collection_add, collection_count, collection_find_all, collection_find_by_id, collection_find_one, collection_find_one_dict, collection_find_all_dict, collection_del_one_dict, collection_del_all_dict, collection_init, mkid, prepare_filters } from '../../liwe/arangodb';
 import { DocumentCollection } from 'arangojs/collection';
 import { $l } from '../../liwe/locale';
 
@@ -21,7 +21,7 @@ const COLL_USER_FACERECS = "user_facerecs";
 const COLL_USERS = "users";
 
 /*=== d2r_start __file_header === */
-import { isValidEmail, jwt_crypt, jwt_decrypt, keys_filter, keys_valid, random_string, recaptcha_check, set_attr, sha512, unique_code } from '../../liwe/utils';
+import { challenge_check, isValidEmail, jwt_crypt, jwt_decrypt, keys_filter, keys_valid, random_string, recaptcha_check, set_attr, sha512, unique_code } from '../../liwe/utils';
 import { tag_obj } from '../tag/methods';
 import { add_suspicious_activity } from '../../liwe/defender';
 import { send_mail_template } from '../../liwe/mail';
@@ -172,6 +172,19 @@ const _password_check = ( req: ILRequest, password: string, user: User, err: any
 	}
 
 	return true;
+};
+
+const _create_user_session = async ( req: ILRequest, user: User ) => {
+	const tok: any = await user_session_create( req, user );
+
+	const resp: UserSessionData = {
+		access_token: tok,
+		token_type: 'bearer',
+		name: user.name,
+		lastname: user.lastname,
+	};
+
+	return resp;
 };
 /*=== d2r_end __file_header ===*/
 
@@ -621,16 +634,58 @@ export const post_user_login = ( req: ILRequest, email: string, password: string
 		if ( !_password_check( req, password, user, err, email ) )
 			return cback ? cback( err ) : reject( err );
 
-		const tok: any = await user_session_create( req, user );
-		const resp: UserSessionData = {
-			access_token: tok,
-			token_type: 'bearer',
-			name: user.name,
-			lastname: user.lastname,
-		};
+		const resp: UserSessionData = await _create_user_session( req, user );
 
 		return cback ? cback( null, resp ) : resolve( resp );
 		/*=== d2r_end post_user_login ===*/
+	} );
+};
+// }}}
+
+// {{{ post_user_login_remote ( req: ILRequest, email: string, name: string, challenge: string, avatar?: string, cback: LCBack = null ): Promise<UserSessionData>
+/**
+ * Standard user login
+ *
+ * @param email - The user email [req]
+ * @param name - The user name [req]
+ * @param challenge - The challenge [req]
+ * @param avatar - The user avatar [opt]
+ *
+ */
+export const post_user_login_remote = ( req: ILRequest, email: string, name: string, challenge: string, avatar?: string, cback: LCback = null ): Promise<UserSessionData> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== d2r_start post_user_login_remote ===*/
+		const err = { message: _( 'Invalid data for user remote login' ) };
+
+		console.log( "\n\n\n==== post_user_login_remote: ", { email, name, challenge, avatar } );
+
+		// Check if the challenge is valid
+		if ( !challenge_check( challenge, [ email, name, avatar ] ) )
+			return cback ? cback( err ) : reject( err );
+
+		// Check if the user exists
+		let user: User = await user_get( undefined, email );
+
+		if ( user ) {
+			// If the user is not enabled, we reject the request
+			if ( user.enabled === false ) {
+				err.message = _( 'User not enabled' );
+				add_suspicious_activity( req, req.res, `User not enabled ${ email }` );
+				return cback ? cback( err ) : reject( err );
+			}
+		} else {
+			// If we arrive here, it is a new user
+
+			// extract name and lastname from string
+			const [ name_, lastname ] = name.split( ' ' );
+			user = { id: mkid( 'user' ), email, password: sha512( mkid( 'temp' ) ), name: name_, lastname, enabled: true, language: 'en', avatar };
+			user = await collection_add( _coll_users, user, false, UserKeys );
+		}
+
+		// If the user exists we create a valid session and return
+		const resp: UserSessionData = await _create_user_session( req, user );
+		return cback ? cback( null, resp ) : resolve( resp );
+		/*=== d2r_end post_user_login_remote ===*/
 	} );
 };
 // }}}
@@ -956,7 +1011,7 @@ export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boole
 			{ type: "persistent", fields: [ "domain" ], unique: false },
 			{ type: "persistent", fields: [ "id_user" ], unique: false },
 			{ type: "persistent", fields: [ "id_upload" ], unique: true },
-		] );
+		], { drop: false } );
 
 		_coll_users = await collection_init( liwe.db, COLL_USERS, [
 			{ type: "persistent", fields: [ "id" ], unique: true },
@@ -966,7 +1021,7 @@ export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boole
 			{ type: "persistent", fields: [ "tags[*]" ], unique: false },
 			{ type: "persistent", fields: [ "id_upload" ], unique: false },
 			{ type: "persistent", fields: [ "deleted" ], unique: false },
-		] );
+		], { drop: false } );
 
 		/*=== d2r_start user_db_init ===*/
 
