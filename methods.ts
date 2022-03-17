@@ -182,6 +182,7 @@ const _create_user_session = async ( req: ILRequest, user: User ) => {
 		token_type: 'bearer',
 		name: user.name,
 		lastname: user.lastname,
+		id: user.id,
 	};
 
 	return resp;
