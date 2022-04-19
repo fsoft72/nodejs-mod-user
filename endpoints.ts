@@ -6,7 +6,7 @@ import { locale_load } from '../../liwe/locale';
 import { perms } from '../../liwe/auth';
 
 import {
-	post_user_admin_add, patch_user_admin_update, delete_user_admin_del, patch_user_admin_fields, post_user_register, patch_user_update, post_user_avatar, post_user_facerec_add, post_user_password_forgot, post_user_password_reset, get_user_register_activate, post_user_tag, post_user_token, post_user_login, post_user_login_remote, get_user_admin_list, get_user_logout, get_user_me, post_user_perms_set, post_user_info_add, delete_user_info_del, patch_user_profile, get_user_test_create, patch_user_change_password, patch_user_set_bio, patch_user_set_billing, user_db_init, user_session_create, user_session_get, user_session_del, user_facerec_get
+	post_user_admin_add, patch_user_admin_update, delete_user_admin_del, patch_user_admin_fields, post_user_register, patch_user_update, post_user_avatar, post_user_facerec_add, post_user_password_forgot, post_user_password_reset, get_user_register_activate, post_user_tag, post_user_token, post_user_login, post_user_login_remote, get_user_admin_list, get_user_logout, get_user_me, post_user_perms_set, post_user_info_add, delete_user_info_del, patch_user_profile, get_user_test_create, patch_user_change_password, patch_user_set_bio, patch_user_set_billing, user_db_init, user_facerec_get, user_session_del, user_session_get, user_session_create
 } from './methods';
 
 import {
@@ -205,7 +205,7 @@ export const init = ( liwe: ILiWE ) => {
 		} );
 	} );
 
-	app.post ( "/api/user/tag", perms( [ "user.tag" ] ), ( req: ILRequest, res: ILResponse ) => {
+	app.post ( "/api/user/tag", perms( [ "user.tag", "user.create" ] ), ( req: ILRequest, res: ILResponse ) => {
 		const { id_user, tags, ___errors } = typed_dict( req.body, [
 			{ name: "id_user", type: "string", required: true },
 			{ name: "tags", type: "string[]", required: true }
@@ -228,10 +228,10 @@ export const init = ( liwe: ILiWE ) => {
 
 		if ( ___errors.length ) return send_error ( res, { message: `Parameters error: ${___errors.join ( ', ' )}` } );
 
-		post_user_token ( req,username, password,  ( err: ILError, tmp: UserSessionData ) => {
+		post_user_token ( req,username, password,  ( err: ILError, token: UserSessionData ) => {
 			if ( err ) return send_error( res, err );
 
-			send_ok( res, { id: tmp.id, access_token: tmp.access_token, token_type: tmp.token_type, name: tmp.name, lastname: tmp.lastname, avatar: tmp.avatar } );
+			send_ok( res, { token } );
 		} );
 	} );
 
@@ -247,7 +247,7 @@ export const init = ( liwe: ILiWE ) => {
 		post_user_login ( req,email, password, recaptcha,  ( err: ILError, tmp: UserSessionData ) => {
 			if ( err ) return send_error( res, err );
 
-			send_ok( res, { id: tmp.id, access_token: tmp.access_token, token_type: tmp.token_type, name: tmp.name, lastname: tmp.lastname, avatar: tmp.avatar } );
+			send_ok( res, { ...tmp } );
 		} );
 	} );
 
@@ -264,7 +264,7 @@ export const init = ( liwe: ILiWE ) => {
 		post_user_login_remote ( req,email, name, challenge, avatar,  ( err: ILError, tmp: UserSessionData ) => {
 			if ( err ) return send_error( res, err );
 
-			send_ok( res, { id: tmp.id, access_token: tmp.access_token, token_type: tmp.token_type, name: tmp.name, lastname: tmp.lastname, avatar: tmp.avatar } );
+			send_ok( res, { ...tmp } );
 		} );
 	} );
 
@@ -285,7 +285,7 @@ export const init = ( liwe: ILiWE ) => {
 	app.get ( "/api/user/logout", ( req: ILRequest, res: ILResponse ) => {
 		
 		
-		get_user_logout ( req, ( err: ILError, ok: number ) => {
+		get_user_logout ( req, ( err: ILError, ok: boolean ) => {
 			if ( err ) return send_error( res, err );
 
 			send_ok( res, { ok } );
@@ -402,8 +402,8 @@ export const init = ( liwe: ILiWE ) => {
 
 	app.patch ( "/api/user/set/bio", perms( [ "is-logged" ] ), ( req: ILRequest, res: ILResponse ) => {
 		const { tagline, bio, ___errors } = typed_dict( req.body, [
-			{ name: "tagline", type: "string", required: true },
-			{ name: "bio", type: "string", required: true }
+			{ name: "tagline", type: "string" },
+			{ name: "bio", type: "string" }
 		] );
 
 		if ( ___errors.length ) return send_error ( res, { message: `Parameters error: ${___errors.join ( ', ' )}` } );
@@ -417,8 +417,8 @@ export const init = ( liwe: ILiWE ) => {
 
 	app.patch ( "/api/user/set/billing", perms( [ "is-logged" ] ), ( req: ILRequest, res: ILResponse ) => {
 		const { address, nr, name, city, zip, state, country, company_name, fiscal_code, vat_number, sdi, pec, ___errors } = typed_dict( req.body, [
-			{ name: "address", type: "string", required: true },
-			{ name: "nr", type: "string", required: true },
+			{ name: "address", type: "string" },
+			{ name: "nr", type: "string" },
 			{ name: "name", type: "string" },
 			{ name: "city", type: "string" },
 			{ name: "zip", type: "string" },

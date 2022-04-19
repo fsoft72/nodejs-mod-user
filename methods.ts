@@ -191,7 +191,8 @@ const _create_user_session = async ( req: ILRequest, user: User ) => {
 
 // {{{ post_user_admin_add ( req: ILRequest, email: string, password: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, cback: LCBack = null ): Promise<User>
 /**
- * Creates a new user in the system
+ * This endpoint creates a valid user in the system, bypassing registration and verification phases.
+
  *
  * @param email - The user email [req]
  * @param password - The user password [req]
@@ -228,7 +229,7 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
 
 // {{{ patch_user_admin_update ( req: ILRequest, id: string, email?: string, password?: string, name?: string, lastname?: string, enabled?: boolean, level?: number, language?: string, cback: LCBack = null ): Promise<User>
 /**
- * Updates a specified user
+ *
  *
  * @param id - The user id to be changed [req]
  * @param email - the new user email [opt]
@@ -287,7 +288,7 @@ export const patch_user_admin_update = ( req: ILRequest, id: string, email?: str
 /**
  * Deletes a user from the system
  *
- * @param id_user - The user ID [req]
+ * @param id_user - The user ID to be deleted [req]
  *
  */
 export const delete_user_admin_del = ( req: ILRequest, id_user: string, cback: LCback = null ): Promise<string> => {
@@ -314,9 +315,10 @@ export const delete_user_admin_del = ( req: ILRequest, id_user: string, cback: L
 
 // {{{ patch_user_admin_fields ( req: ILRequest, id: string, data: any, cback: LCBack = null ): Promise<User>
 /**
- * Modifies single fields
+ * The call modifies a single field.
+This function returns the full `User` structure
  *
- * @param id - The post ID [req]
+ * @param id - the user id [req]
  * @param data - The field / value to patch [req]
  *
  */
@@ -331,7 +333,12 @@ export const patch_user_admin_fields = ( req: ILRequest, id: string, data: any, 
 
 // {{{ post_user_register ( req: ILRequest, email: string, password: string, recaptcha: string, name?: string, lastname?: string, cback: LCBack = null ): Promise<UserActivationCode>
 /**
- * Start the registration process
+ * Start the registration process of the user.
+The call creates an entry inside the database (if no error is encountered)
+
+If in **debug mode** this functyion returns  the `UserActivationCode`
+
+
  *
  * @param email - the new user email [req]
  * @param password - the user password [req]
@@ -380,11 +387,13 @@ export const post_user_register = ( req: ILRequest, email: string, password: str
 
 // {{{ patch_user_update ( req: ILRequest, email?: string, password?: string, name?: string, lastname?: string, cback: LCBack = null ): Promise<User>
 /**
- * Updates the user data
+ * Updates user data.
+
+Only the user can update him/her self.
  *
  * @param email - the new user email [opt]
  * @param password - the user password [opt]
- * @param name - the user first name [opt]
+ * @param name - the user name [opt]
  * @param lastname - the user lastname [opt]
  *
  */
@@ -399,9 +408,10 @@ export const patch_user_update = ( req: ILRequest, email?: string, password?: st
 
 // {{{ post_user_avatar ( req: ILRequest, avatar: File, cback: LCBack = null ): Promise<User>
 /**
- * Uploads user avatar
+ * Uploads a user avatar.
+Only the user can update him/her self.
  *
- * @param avatar - the user avatar file [req]
+ * @param avatar - The user avatar file [req]
  *
  */
 export const post_user_avatar = ( req: ILRequest, avatar: File, cback: LCback = null ): Promise<User> => {
@@ -422,7 +432,9 @@ export const post_user_avatar = ( req: ILRequest, avatar: File, cback: LCback = 
 
 // {{{ post_user_facerec_add ( req: ILRequest, face: File, cback: LCBack = null ): Promise<UserFaceRec>
 /**
- * Uploads user face
+ * Uploads a user face for face recognition.
+
+Only the user can update him/her self.
  *
  * @param face - the user face photo [req]
  *
@@ -445,10 +457,14 @@ export const post_user_facerec_add = ( req: ILRequest, face: File, cback: LCback
 
 // {{{ post_user_password_forgot ( req: ILRequest, email: string, recaptcha: string, cback: LCBack = null ): Promise<string>
 /**
- * Start the 'Forgot password?' process
+ * Start the 'Password forgotten' process for the user.
+
+The call creates a temporary token for the user.
+
+In **debug mode**  returns to the user the activation code as  ``str`` inside ``uac``.
  *
- * @param email - the new user email [req]
- * @param recaptcha - The recaptcha check code [req]
+ * @param email - the user email [req]
+ * @param recaptcha - the recaptcha verification code [req]
  *
  */
 export const post_user_password_forgot = ( req: ILRequest, email: string, recaptcha: string, cback: LCback = null ): Promise<string> => {
@@ -487,7 +503,8 @@ export const post_user_password_forgot = ( req: ILRequest, email: string, recapt
 
 // {{{ post_user_password_reset ( req: ILRequest, email: string, code: string, password: string, cback: LCBack = null ): Promise<boolean>
 /**
- * Reset the password
+ * Resets the user password.
+
  *
  * @param email - the user email [req]
  * @param code - the activation code [req]
@@ -522,7 +539,7 @@ export const post_user_password_reset = ( req: ILRequest, email: string, code: s
 
 // {{{ get_user_register_activate ( req: ILRequest, code: string, cback: LCBack = null ): Promise<User>
 /**
- * Activate the user
+ * This is the activation request.
  *
  * @param code - the activation code returned by the /api/register call [req]
  *
@@ -548,10 +565,11 @@ export const get_user_register_activate = ( req: ILRequest, code: string, cback:
 
 // {{{ post_user_tag ( req: ILRequest, id_user: string, tags: string[], cback: LCBack = null ): Promise<User>
 /**
- * Tag an user
+ * This endpoint allows you to add tags to a user.
+
  *
- * @param id_user - The user ID [req]
- * @param tags - A list of tags to be added to the user [req]
+ * @param id_user - the user id [req]
+ * @param tags -  A list of tags to be added to the user [req]
  *
  */
 export const post_user_tag = ( req: ILRequest, id_user: string, tags: string[], cback: LCback = null ): Promise<User> => {
@@ -571,7 +589,10 @@ export const post_user_tag = ( req: ILRequest, id_user: string, tags: string[], 
 
 // {{{ post_user_token ( req: ILRequest, username: string, password: string, cback: LCBack = null ): Promise<UserSessionData>
 /**
- * User authentication with OAuth2
+ * This endpoint implements the user authentication with the ``OAuth2`` protocol.
+
+If the user is known, a JWT token with the running session is returned to the system.
+
  *
  * @param username - it must contain the user email [req]
  * @param password - the user password [req]
@@ -604,7 +625,9 @@ export const post_user_token = ( req: ILRequest, username: string, password: str
 
 // {{{ post_user_login ( req: ILRequest, email: string, password: string, recaptcha: string, cback: LCBack = null ): Promise<UserSessionData>
 /**
- * Standard user login
+ * This endpoint implements the user authentication with ``login`` and ``password``.
+
+If the user is known, a JWT token with the running session is returned to the system.
  *
  * @param email - The user email [req]
  * @param password - the user password [req]
@@ -635,7 +658,13 @@ export const post_user_login = ( req: ILRequest, email: string, password: string
 		if ( !_password_check( req, password, user, err, email ) )
 			return cback ? cback( err ) : reject( err );
 
-		const resp: UserSessionData = await _create_user_session( req, user );
+		const tok: any = await user_session_create( req, user );
+		const resp: UserSessionData = {
+			access_token: tok,
+			token_type: 'bearer',
+			name: user.name,
+			lastname: user.lastname,
+		};
 
 		return cback ? cback( null, resp ) : resolve( resp );
 		/*=== d2r_end post_user_login ===*/
@@ -645,7 +674,13 @@ export const post_user_login = ( req: ILRequest, email: string, password: string
 
 // {{{ post_user_login_remote ( req: ILRequest, email: string, name: string, challenge: string, avatar?: string, cback: LCBack = null ): Promise<UserSessionData>
 /**
- * Standard user login
+ * This endpoint logs in a user authenticated by a remote service.
+
+Since this is a public call, the `challenge` parameter is used to verify that the call is from the correct service.
+
+The `challenge` parameter is a `MD5` hash created composing (`email` + `name` + `remote_secret_key` as set in the `data.json` config file under `security / remote`).
+
+The `avatar` parameter is optional and it can contain an absolute URL to an image avatar of the user.
  *
  * @param email - The user email [req]
  * @param name - The user name [req]
@@ -686,6 +721,7 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
 		// If the user exists we create a valid session and return
 		const resp: UserSessionData = await _create_user_session( req, user );
 		return cback ? cback( null, resp ) : resolve( resp );
+
 		/*=== d2r_end post_user_login_remote ===*/
 	} );
 };
@@ -693,9 +729,15 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
 
 // {{{ get_user_admin_list ( req: ILRequest, tag?: string, cback: LCBack = null ): Promise<User[]>
 /**
- * List users to the system
+ * Returns all user registered to the system.
+
+If `domain` is specified, the list is filtered by domain.
+
+If the user does not have the `system.admin` permission, only the users by his `domain` will be shown.
+
+If `tag` is specified, the list is filtered by tag.
  *
- * @param tag - The tag to filter by [opt]
+ * @param tag -  The tag to filter by [opt]
  *
  */
 export const get_user_admin_list = ( req: ILRequest, tag?: string, cback: LCback = null ): Promise<User[]> => {
@@ -724,14 +766,15 @@ export const get_user_admin_list = ( req: ILRequest, tag?: string, cback: LCback
 };
 // }}}
 
-// {{{ get_user_logout ( req: ILRequest, cback: LCBack = null ): Promise<number>
+// {{{ get_user_logout ( req: ILRequest, cback: LCBack = null ): Promise<boolean>
 /**
- * Logs out the current user
+ * This endpoint logs out the current user
+
  *
 
  *
  */
-export const get_user_logout = ( req: ILRequest, cback: LCback = null ): Promise<number> => {
+export const get_user_logout = ( req: ILRequest, cback: LCback = null ): Promise<boolean> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== d2r_start get_user_logout ===*/
 		if ( !req.user ) return cback ? cback( null, false ) : resolve( false as any );
@@ -748,7 +791,8 @@ export const get_user_logout = ( req: ILRequest, cback: LCback = null ): Promise
 
 // {{{ get_user_me ( req: ILRequest, cback: LCBack = null ): Promise<User>
 /**
- * Returns all the data of the currently logged user
+ * This endpoints returns all data related to the currently logged in user.
+
  *
 
  *
@@ -773,7 +817,11 @@ export const get_user_me = ( req: ILRequest, cback: LCback = null ): Promise<Use
 
 // {{{ post_user_perms_set ( req: ILRequest, id_user: string, perms: UserPerms, cback: LCBack = null ): Promise<boolean>
 /**
- * Sets the user permissions
+ * This endpoint set the full user permissions.
+
+The function will allow changing the permsissions only if the request comes from a logged user with the `user.perms` permission set.
+
+If the  `system: [ 'admin' ]` permission is set to the user, it becomes a super user and can do **all** operations on the system.
  *
  * @param id_user - The user id [req]
  * @param perms - A JSON of `UserPerms` structure [req]
@@ -798,10 +846,16 @@ export const post_user_perms_set = ( req: ILRequest, id_user: string, perms: Use
 
 // {{{ post_user_info_add ( req: ILRequest, key: string, data: any, cback: LCBack = null ): Promise<boolean>
 /**
- * Adds more data to the user in the extra field
+ * This endpoint adds extra information inside the `extra` field, under the `key` specified.
+
+If `key` was already present in the `extra` field, everything in `key` will be overwritten.
+
+New `key`s will be added to `extra`.
+
+If `key` is omitted (passing `''`)  the data is added to the `extra` root.
  *
- * @param key - The main key. [req]
- * @param data - The new data to be added [req]
+ * @param key - the  main key [req]
+ * @param data - the new data to be added [req]
  *
  */
 export const post_user_info_add = ( req: ILRequest, key: string, data: any, cback: LCback = null ): Promise<boolean> => {
@@ -821,9 +875,10 @@ export const post_user_info_add = ( req: ILRequest, key: string, data: any, cbac
 
 // {{{ delete_user_info_del ( req: ILRequest, key: string, cback: LCBack = null ): Promise<boolean>
 /**
- * Deletes a key from extra field
+ * This endpoint deletes the specified `key` from the `extra` field.
+
  *
- * @param key - The main key. [req]
+ * @param key - The `key` to be deleted [req]
  *
  */
 export const delete_user_info_del = ( req: ILRequest, key: string, cback: LCback = null ): Promise<boolean> => {
@@ -843,23 +898,25 @@ export const delete_user_info_del = ( req: ILRequest, key: string, cback: LCback
 
 // {{{ patch_user_profile ( req: ILRequest, name?: string, lastname?: string, phone?: string, email?: string, addr_street?: string, addr_nr?: string, addr_zip?: string, addr_city?: string, addr_state?: string, addr_country?: string, facebook?: string, twitter?: string, linkedin?: string, instagram?: string, website?: string, cback: LCBack = null ): Promise<User>
 /**
- * Changes data to the user profile
+ * This is the first tab 'Profile' of the UserProfile interface.
+
+You can change data only to the current loggedin user.
  *
- * @param name -  [opt]
- * @param lastname -  [opt]
- * @param phone -  [opt]
- * @param email -  [opt]
- * @param addr_street -  [opt]
- * @param addr_nr -  [opt]
- * @param addr_zip -  [opt]
- * @param addr_city -  [opt]
- * @param addr_state -  [opt]
- * @param addr_country -  [opt]
- * @param facebook -  [opt]
- * @param twitter -  [opt]
- * @param linkedin -  [opt]
- * @param instagram -  [opt]
- * @param website -  [opt]
+ * @param name - The user name [opt]
+ * @param lastname - The user lastname [opt]
+ * @param phone - User phone [opt]
+ * @param email - user email [opt]
+ * @param addr_street - Address street [opt]
+ * @param addr_nr - Address street number [opt]
+ * @param addr_zip - Address zip code [opt]
+ * @param addr_city - Address city [opt]
+ * @param addr_state - Address state (or probvince) [opt]
+ * @param addr_country - Address country [opt]
+ * @param facebook - Facebook user name [opt]
+ * @param twitter - Twitter user name [opt]
+ * @param linkedin - Linkedin user name [opt]
+ * @param instagram - Instagram user name [opt]
+ * @param website - User personal web site [opt]
  *
  */
 export const patch_user_profile = ( req: ILRequest, name?: string, lastname?: string, phone?: string, email?: string, addr_street?: string, addr_nr?: string, addr_zip?: string, addr_city?: string, addr_state?: string, addr_country?: string, facebook?: string, twitter?: string, linkedin?: string, instagram?: string, website?: string, cback: LCback = null ): Promise<User> => {
@@ -885,7 +942,8 @@ export const patch_user_profile = ( req: ILRequest, name?: string, lastname?: st
 
 // {{{ get_user_test_create ( req: ILRequest, cback: LCBack = null ): Promise<User>
 /**
- * Creates a demo user
+ * This endpoint creates a demo user
+
  *
 
  *
@@ -904,11 +962,13 @@ export const get_user_test_create = ( req: ILRequest, cback: LCback = null ): Pr
 
 // {{{ patch_user_change_password ( req: ILRequest, old_password: string, new_password: string, recaptcha: string, cback: LCBack = null ): Promise<boolean>
 /**
- * Changes the user password
+ * This is the change password functionality for UserProfile tab.
+
+You can change data only to the current loggedin user.
  *
- * @param old_password -  [req]
- * @param new_password -  [req]
- * @param recaptcha -  [req]
+ * @param old_password - the old password [req]
+ * @param new_password - the new password [req]
+ * @param recaptcha - the recaptcha verfication code [req]
  *
  */
 export const patch_user_change_password = ( req: ILRequest, old_password: string, new_password: string, recaptcha: string, cback: LCback = null ): Promise<boolean> => {
@@ -938,15 +998,17 @@ export const patch_user_change_password = ( req: ILRequest, old_password: string
 };
 // }}}
 
-// {{{ patch_user_set_bio ( req: ILRequest, tagline: string, bio: string, cback: LCBack = null ): Promise<User>
+// {{{ patch_user_set_bio ( req: ILRequest, tagline?: string, bio?: string, cback: LCBack = null ): Promise<User>
 /**
- * Creates / update users bio
+ * Use this endpoint to update user `bio` or `tagline` (or both).
+
+The currently logged in user can only change his/her own data.
  *
- * @param tagline -  [None]
- * @param bio -  [None]
+ * @param tagline - User tagline [opt]
+ * @param bio - User bio [opt]
  *
  */
-export const patch_user_set_bio = ( req: ILRequest, tagline: string, bio: string, cback: LCback = null ): Promise<User> => {
+export const patch_user_set_bio = ( req: ILRequest, tagline?: string, bio?: string, cback: LCback = null ): Promise<User> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== d2r_start patch_user_set_bio ===*/
 		let user: User = await user_get( req.user.id );
@@ -962,12 +1024,14 @@ export const patch_user_set_bio = ( req: ILRequest, tagline: string, bio: string
 };
 // }}}
 
-// {{{ patch_user_set_billing ( req: ILRequest, address: string, nr: string, name?: string, city?: string, zip?: string, state?: string, country?: string, company_name?: string, fiscal_code?: string, vat_number?: string, sdi?: string, pec?: string, cback: LCBack = null ): Promise<User>
+// {{{ patch_user_set_billing ( req: ILRequest, address?: string, nr?: string, name?: string, city?: string, zip?: string, state?: string, country?: string, company_name?: string, fiscal_code?: string, vat_number?: string, sdi?: string, pec?: string, cback: LCBack = null ): Promise<User>
 /**
- * Creates / update user billing info
+ * Creates / updates the user billing info.
+
+You can change data only to the current loggedin user.
  *
- * @param address - The street address [req]
- * @param nr - The street address number [req]
+ * @param address - The street address [opt]
+ * @param nr - The street address number [opt]
  * @param name - Address name [opt]
  * @param city - Address city [opt]
  * @param zip - Address postal code [opt]
@@ -980,7 +1044,7 @@ export const patch_user_set_bio = ( req: ILRequest, tagline: string, bio: string
  * @param pec - PEC email [opt]
  *
  */
-export const patch_user_set_billing = ( req: ILRequest, address: string, nr: string, name?: string, city?: string, zip?: string, state?: string, country?: string, company_name?: string, fiscal_code?: string, vat_number?: string, sdi?: string, pec?: string, cback: LCback = null ): Promise<User> => {
+export const patch_user_set_billing = ( req: ILRequest, address?: string, nr?: string, name?: string, city?: string, zip?: string, state?: string, country?: string, company_name?: string, fiscal_code?: string, vat_number?: string, sdi?: string, pec?: string, cback: LCback = null ): Promise<User> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== d2r_start patch_user_set_billing ===*/
 		await address_add( req, req.user.id, address, nr, 'Invoice info', 'invoice', city, zip, state, country, company_name, fiscal_code, vat_number, sdi, pec, null, true );
@@ -998,9 +1062,10 @@ export const patch_user_set_billing = ( req: ILRequest, address: string, nr: str
 
 
 /**
- * Initializes user module database
+ * This function initializes the module database tables.
+
  *
- * @param liwe - LiWE full config [req]
+ * @param liwe - LiWE full instance [req]
  *
  */
 export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boolean> => {
@@ -1043,7 +1108,75 @@ export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boole
 };
 
 /**
- * Creates a new session for the User
+ * Gets all Face Recs binded to a user
+ *
+ * @param req - The ILRequest [req]
+ * @param id_user - ID user [req]
+ *
+ */
+export const user_facerec_get = ( req: ILRequest, id_user: string, cback: LCback = null ): Promise<UserFaceRec[]> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== d2r_start user_facerec_get ===*/
+		const faces: UserFaceRec[] = await collection_find_all_dict( req.db, COLL_USER_FACERECS, { id_user }, UserFaceRecKeys );
+
+		return cback ? cback( null, faces ) : resolve( faces );
+		/*=== d2r_end user_facerec_get ===*/
+	} );
+};
+
+/**
+ * Removes a session from the system.
+ *
+ * @param req - The ILRequest [req]
+ * @param key - The Session key [req]
+ *
+ */
+export const user_session_del = ( req: ILiWE, key: string, cback: LCback = null ): Promise<boolean> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== d2r_start user_session_del ===*/
+		const s = "FOR el IN sessions FILTER el.key == @key REMOVE el IN sessions";
+		await _liwe.db.query( s, { key } );
+
+		return cback ? cback( null, true ) : resolve( true );
+		/*=== d2r_end user_session_del ===*/
+	} );
+};
+
+/**
+ * This function retrieves the session from the sessions collection, using the JWT token provided.
+
+If the session is expired or does not exists, an empty object is returned.
+ *
+ * @param req - The ILRequest [req]
+ * @param tok - The JSON Web Token to decode [req]
+ *
+ */
+export const user_session_get = ( req: ILRequest, tok: string, cback: LCback = null ): Promise<any> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== d2r_start user_session_get ===*/
+		const payload = jwt_decrypt( tok, _liwe.cfg.security.secret );
+		const err = { message: _( 'Session expired' ) };
+
+		if ( !payload ) return cback ? cback( err ) : reject( err );
+
+		const [ key, sess_id ] = await session_id( req, payload );
+
+		const data = await session_get( req, key );
+
+		err.message = _( 'Session not found' );
+		if ( !data ) return cback ? cback( err ) : reject( err );
+
+		return cback ? cback( null, data ) : resolve( data );
+		/*=== d2r_end user_session_get ===*/
+	} );
+};
+
+/**
+ * This function creates a new entry in the sessions collection.
+
+If a session for the given user already exists, it will be deleted.
+
+**NOTE** There cannot be more than one session for a given user / email at a time.
  *
  * @param req - The ILRequest [req]
  * @param user - The user to create the session to [req]
@@ -1077,67 +1210,5 @@ export const user_session_create = ( req: ILRequest, user: User, cback: LCback =
 
 		return cback ? cback( null, tok ) : resolve( tok );
 		/*=== d2r_end user_session_create ===*/
-	} );
-};
-
-/**
- * Returns a user session by the given Token
- *
- * @param req - The ILRequest [req]
- * @param tok - The JSON Web Token to decode [req]
- *
- */
-export const user_session_get = ( req: ILRequest, tok: string, cback: LCback = null ): Promise<any> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== d2r_start user_session_get ===*/
-		const payload = jwt_decrypt( tok, _liwe.cfg.security.secret );
-		const err = { message: _( 'Session expired' ) };
-
-		if ( !payload ) return cback ? cback( err ) : reject( err );
-
-		const [ key, sess_id ] = await session_id( req, payload );
-
-		const data = await session_get( req, key );
-
-		err.message = _( 'Session not found' );
-		if ( !data ) return cback ? cback( err ) : reject( err );
-
-		return cback ? cback( null, data ) : resolve( data );
-		/*=== d2r_end user_session_get ===*/
-	} );
-};
-
-/**
- * Deletes a session of one user
- *
- * @param req - The ILRequest [req]
- * @param key - The Session key [req]
- *
- */
-export const user_session_del = ( req: ILRequest, key: string, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== d2r_start user_session_del ===*/
-		const s = "FOR el IN sessions FILTER el.key == @key REMOVE el IN sessions";
-		await _liwe.db.query( s, { key } );
-
-		return cback ? cback( null, true ) : resolve( true );
-		/*=== d2r_end user_session_del ===*/
-	} );
-};
-
-/**
- * Gets all Face Rec binded to a user
- *
- * @param req - The ILRequest [req]
- * @param id_user - ID User [req]
- *
- */
-export const user_facerec_get = ( req: ILRequest, id_user: string, cback: LCback = null ): Promise<UserFaceRec[]> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== d2r_start user_facerec_get ===*/
-		const faces: UserFaceRec[] = await collection_find_all_dict( req.db, COLL_USER_FACERECS, { id_user }, UserFaceRecKeys );
-
-		return cback ? cback( null, faces ) : resolve( faces );
-		/*=== d2r_end user_facerec_get ===*/
 	} );
 };

@@ -8,7 +8,7 @@ export interface UserRegistration {
 	email?: string;
 	/** The user password */
 	password?: string;
-	/** The user first name */
+	/** User first name */
 	name?: string;
 	/** User lastname */
 	lastname?: string;
@@ -33,23 +33,23 @@ export const UserActivationCodeKeys = {
 
 /** UserFaceRec */
 export interface UserFaceRec {
-	/** The Face Rec ID */
+	/** the main id field */
 	id?: string;
-	/** The Domain code */
+	/** The domain code */
 	domain?: string;
-	/** The user ID */
+	/** The user id */
 	id_user?: string;
-	/** The Upload File id */
+	/** The upload image id */
 	id_upload?: string;
-	/** The Upload File filename */
+	/** The upload file name */
 	filename?: string;
-	/** The Upload file path */
+	/** The upload path */
 	path?: string;
 }
 
 export const UserFaceRecKeys = {
 	'id': { type: 'string', priv: false },
-	'domain': { type: 'string', priv: false },
+	'domain': { type: 'string', priv: true },
 	'id_user': { type: 'string', priv: false },
 	'id_upload': { type: 'string', priv: false },
 	'filename': { type: 'string', priv: false },
@@ -58,23 +58,23 @@ export const UserFaceRecKeys = {
 
 /** User */
 export interface User {
-	/** The user id */
+	/** the main id field */
 	id?: string;
-	/** The domain name */
+	/** The domain code */
 	domain?: string;
 	/** The user email */
 	email?: string;
-	/** The user first name */
+	/** User name */
 	name?: string;
-	/** The user last name */
+	/** User lastname */
 	lastname?: string;
-	/** All user permissions */
+	/** User permissions */
 	perms?: any;
-	/** Flag T/F to know if the user is enabled */
+	/** If the user can log in or not */
 	enabled?: boolean;
-	/** The user level */
+	/** User level */
 	level?: number;
-	/** The encrypted user password */
+	/** User login password */
 	password?: string;
 	/** User unique code (used for registration and password recovery) */
 	code?: string;
@@ -82,10 +82,10 @@ export interface User {
 	extra?: any;
 	/** Preferred language */
 	language?: string;
-	/** Tags added to the user */
-	tags?: string[];
-	/** The user avatar URL */
+	/** The user Avatar URL */
 	avatar?: string;
+	/** tags for the type */
+	tags?: string[];
 	/** The id of the Upload object (for the avatar) */
 	id_upload?: string;
 	/** The date when the user has been deleted */
@@ -100,7 +100,7 @@ export interface User {
 	linkedin?: string;
 	/** Instagram account */
 	instagram?: string;
-	/** Website personal */
+	/** Website URL */
 	website?: string;
 	/** User tagline */
 	tagline?: string;
@@ -123,8 +123,8 @@ export const UserKeys = {
 	'code': { type: 'string', priv: true },
 	'extra': { type: 'any', priv: false },
 	'language': { type: 'string', priv: false },
-	'tags': { type: 'string[]', priv: false },
 	'avatar': { type: 'string', priv: false },
+	'tags': { type: 'string[]', priv: false },
 	'id_upload': { type: 'string', priv: true },
 	'deleted': { type: 'Date', priv: true },
 	'addresses': { type: 'Address[]', priv: false },
@@ -140,27 +140,30 @@ export const UserKeys = {
 
 /** UserSessionData */
 export interface UserSessionData {
-	/** The user id */
+	/** the main id field */
 	id?: string;
 	/** The JWT access token */
 	access_token?: string;
-	/** The token type (defaults to Bearer) */
-	token_type?: string;
 	/** The user name */
 	name?: string;
 	/** The user lastname */
 	lastname?: string;
 	/** The user avatar URL */
 	avatar?: string;
+	/** The token type (defaults to Bearer) */
+	token_type?: string;
+	/**  */
+	perms?: any;
 }
 
 export const UserSessionDataKeys = {
 	'id': { type: 'string', priv: false },
 	'access_token': { type: 'string', priv: false },
-	'token_type': { type: 'string', priv: false },
 	'name': { type: 'string', priv: false },
 	'lastname': { type: 'string', priv: false },
 	'avatar': { type: 'string', priv: false },
+	'token_type': { type: 'string', priv: false },
+	'perms': { type: 'any', priv: false },
 };
 
 /** UserPerms */
