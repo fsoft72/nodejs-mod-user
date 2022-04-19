@@ -183,6 +183,7 @@ const _create_user_session = async ( req: ILRequest, user: User ) => {
 		name: user.name,
 		lastname: user.lastname,
 		id: user.id,
+		perms: user.perms,
 	};
 
 	return resp;
