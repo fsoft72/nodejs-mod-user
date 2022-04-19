@@ -721,7 +721,6 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
 		// If the user exists we create a valid session and return
 		const resp: UserSessionData = await _create_user_session( req, user );
 		return cback ? cback( null, resp ) : resolve( resp );
-
 		/*=== d2r_end post_user_login_remote ===*/
 	} );
 };

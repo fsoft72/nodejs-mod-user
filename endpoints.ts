@@ -228,10 +228,10 @@ export const init = ( liwe: ILiWE ) => {
 
 		if ( ___errors.length ) return send_error ( res, { message: `Parameters error: ${___errors.join ( ', ' )}` } );
 
-		post_user_token ( req,username, password,  ( err: ILError, token: UserSessionData ) => {
+		post_user_token ( req,username, password,  ( err: ILError, tmp: UserSessionData ) => {
 			if ( err ) return send_error( res, err );
 
-			send_ok( res, { token } );
+			send_ok( res, { ...tmp } );
 		} );
 	} );
 
