@@ -155,8 +155,10 @@ export interface UserSessionData {
 	avatar?: string;
 	/** The token type (defaults to Bearer) */
 	token_type?: string;
-	/**  */
+	/** Array of user perms */
 	perms?: any;
+	/** The user email */
+	email?: string;
 }
 
 export const UserSessionDataKeys = {
@@ -167,6 +169,7 @@ export const UserSessionDataKeys = {
 	'avatar': { type: 'string', priv: false },
 	'token_type': { type: 'string', priv: false },
 	'perms': { type: 'any', priv: false },
+	'email': { type: 'string', priv: false },
 };
 
 /** UserPerms */

@@ -180,6 +180,7 @@ const _create_user_session = async ( req: ILRequest, user: User ) => {
 	const resp: UserSessionData = {
 		access_token: tok,
 		token_type: 'bearer',
+		email: user.email,
 		name: user.name,
 		lastname: user.lastname,
 		id: user.id,
