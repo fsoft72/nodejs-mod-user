@@ -35,8 +35,8 @@ import { Upload } from '../upload/types';
 import { address_add, address_user_list } from '../address/methods';
 import { Address } from '../address/types';
 
-export const user_get = async ( id?: string, email?: string, facerec?: boolean ): Promise<User> => {
-	const [ filters, values ] = prepare_filters( 'u', { id, email } );
+export const user_get = async ( id?: string, email?: string, wallet?: string, facerec?: boolean ): Promise<User> => {
+	const [ filters, values ] = prepare_filters( 'u', { id, email, wallet } );
 
 	if ( !filters.length ) return null;
 
@@ -188,7 +188,6 @@ const _create_user_session = async ( req: ILRequest, user: User ) => {
 
 	return resp;
 };
-
 /*=== d2r_end __file_header ===*/
 
 // {{{ post_user_admin_add ( req: ILRequest, email: string, password: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, cback: LCBack = null ): Promise<User>
@@ -1076,7 +1075,34 @@ The `challenge` parameter is a `MD5` hash created composing (`address` + `remote
 export const post_user_login_metamask = ( req: ILRequest, address: string, challenge: string, cback: LCback = null ): Promise<UserSessionData> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== d2r_start post_user_login_metamask ===*/
+		const err = { message: _( 'Invalid data for user remote login' ) };
 
+		console.log( "\n\n\n==== post_user_login_metamask: ", { address, challenge } );
+
+		// Check if the challenge is valid
+		if ( !challenge_check( challenge, [ address ] ) )
+			return cback ? cback( err ) : reject( err );
+
+		// Check if the user exists
+		let user: User = await user_get( undefined, undefined, address );
+
+		if ( !user ) {
+			err.message = _( 'User not found' );
+			return cback ? cback( err ) : reject( err );
+		}
+
+		if ( user ) {
+			// If the user is not enabled, we reject the request
+			if ( user.enabled === false ) {
+				err.message = _( 'User not enabled' );
+				add_suspicious_activity( req, req.res, `User not enabled ${ user.email }` );
+				return cback ? cback( err ) : reject( err );
+			}
+		}
+
+		// If the user exists we create a valid session and return
+		const resp: UserSessionData = await _create_user_session( req, user );
+		return cback ? cback( null, resp ) : resolve( resp );
 		/*=== d2r_end post_user_login_metamask ===*/
 	} );
 };

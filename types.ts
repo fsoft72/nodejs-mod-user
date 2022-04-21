@@ -108,6 +108,8 @@ export interface User {
 	bio?: string;
 	/** All users Face Rec info */
 	faces?: UserFaceRec[];
+	/** The wallet ID */
+	wallet?: string;
 }
 
 export const UserKeys = {
@@ -136,6 +138,7 @@ export const UserKeys = {
 	'tagline': { type: 'string', priv: false },
 	'bio': { type: 'string', priv: false },
 	'faces': { type: 'UserFaceRec[]', priv: false },
+	'wallet': { type: 'string', priv: false },
 };
 
 /** UserSessionData */
