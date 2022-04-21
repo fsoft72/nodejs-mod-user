@@ -188,6 +188,7 @@ const _create_user_session = async ( req: ILRequest, user: User ) => {
 
 	return resp;
 };
+
 /*=== d2r_end __file_header ===*/
 
 // {{{ post_user_admin_add ( req: ILRequest, email: string, password: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, cback: LCBack = null ): Promise<User>
@@ -1056,6 +1057,27 @@ export const patch_user_set_billing = ( req: ILRequest, address?: string, nr?: s
 
 		return cback ? cback( null, user ) : resolve( user );
 		/*=== d2r_end patch_user_set_billing ===*/
+	} );
+};
+// }}}
+
+// {{{ post_user_login_metamask ( req: ILRequest, address: string, challenge: string, cback: LCBack = null ): Promise<UserSessionData>
+/**
+ * This endpoint logs in a user authenticated by a remote service.
+
+Since this is a public call, the `challenge` parameter is used to verify that the call is from the correct service.
+
+The `challenge` parameter is a `MD5` hash created composing (`address` + `remote_secret_key` as set in the `data.json` config file under `security / remote`).
+ *
+ * @param address - The wallet address [req]
+ * @param challenge - The challenge [req]
+ *
+ */
+export const post_user_login_metamask = ( req: ILRequest, address: string, challenge: string, cback: LCback = null ): Promise<UserSessionData> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== d2r_start post_user_login_metamask ===*/
+
+		/*=== d2r_end post_user_login_metamask ===*/
 	} );
 };
 // }}}

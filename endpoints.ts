@@ -6,7 +6,7 @@ import { locale_load } from '../../liwe/locale';
 import { perms } from '../../liwe/auth';
 
 import {
-	post_user_admin_add, patch_user_admin_update, delete_user_admin_del, patch_user_admin_fields, post_user_register, patch_user_update, post_user_avatar, post_user_facerec_add, post_user_password_forgot, post_user_password_reset, get_user_register_activate, post_user_tag, post_user_token, post_user_login, post_user_login_remote, get_user_admin_list, get_user_logout, get_user_me, post_user_perms_set, post_user_info_add, delete_user_info_del, patch_user_profile, get_user_test_create, patch_user_change_password, patch_user_set_bio, patch_user_set_billing, user_db_init, user_facerec_get, user_session_del, user_session_get, user_session_create
+	post_user_admin_add, patch_user_admin_update, delete_user_admin_del, patch_user_admin_fields, post_user_register, patch_user_update, post_user_avatar, post_user_facerec_add, post_user_password_forgot, post_user_password_reset, get_user_register_activate, post_user_tag, post_user_token, post_user_login, post_user_login_remote, get_user_admin_list, get_user_logout, get_user_me, post_user_perms_set, post_user_info_add, delete_user_info_del, patch_user_profile, get_user_test_create, patch_user_change_password, patch_user_set_bio, patch_user_set_billing, post_user_login_metamask, user_db_init, user_facerec_get, user_session_del, user_session_get, user_session_create
 } from './methods';
 
 import {
@@ -437,6 +437,21 @@ export const init = ( liwe: ILiWE ) => {
 			if ( err ) return send_error( res, err );
 
 			send_ok( res, { user } );
+		} );
+	} );
+
+	app.post ( "/api/user/login/metamask", ( req: ILRequest, res: ILResponse ) => {
+		const { address, challenge, ___errors } = typed_dict( req.body, [
+			{ name: "address", type: "string", required: true },
+			{ name: "challenge", type: "string", required: true }
+		] );
+
+		if ( ___errors.length ) return send_error ( res, { message: `Parameters error: ${___errors.join ( ', ' )}` } );
+
+		post_user_login_metamask ( req,address, challenge,  ( err: ILError, tmp: UserSessionData ) => {
+			if ( err ) return send_error( res, err );
+
+			send_ok( res, { ...tmp } );
 		} );
 	} );
 
