@@ -402,7 +402,18 @@ Only the user can update him/her self.
 export const patch_user_update = ( req: ILRequest, email?: string, password?: string, name?: string, lastname?: string, cback: LCback = null ): Promise<User> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== d2r_start patch_user_update ===*/
+		let u = await user_get( req.user.id );
 
+		if ( !u ) {
+			const err = { message: _( 'User not found' ) };
+			return cback ? cback( err ) : reject( err );
+		}
+
+		u = { ...u, ...keys_valid( { email, password, name, lastname } ) };
+
+		u = await collection_add( _coll_users, u, false, UserKeys );
+
+		return cback ? cback( null, u ) : resolve( u );
 		/*=== d2r_end patch_user_update ===*/
 	} );
 };
