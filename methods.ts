@@ -1120,6 +1120,45 @@ export const post_user_login_metamask = ( req: ILRequest, address: string, chall
 };
 // }}}
 
+// {{{ get_user_admin_get ( req: ILRequest, id?: string, email?: string, name?: string, lastname?: string, cback: LCBack = null ): Promise<User>
+/**
+ * This method can return a user after searching all users by some params.
+
+Params are all optional, but at least one must be given, or the current user will be returned.
+
+If the search returns more than one single user, only the first will be returned.
+ *
+ * @param id - The user id [opt]
+ * @param email - The user email [opt]
+ * @param name - The user name [opt]
+ * @param lastname - The user lastname [opt]
+ *
+ */
+export const get_user_admin_get = ( req: ILRequest, id?: string, email?: string, name?: string, lastname?: string, cback: LCback = null ): Promise<User> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== d2r_start get_user_admin_get ===*/
+		const [ filters, values ] = prepare_filters( 'u', { id, email, name, lastname } );
+		let user: User = null;
+
+		if ( !Object.keys( filters ).length ) {
+			user = await user_get( req.user.id );
+		} else {
+			user = await collection_find_one( req.db, `
+			FOR u IN users
+				${ filters }
+				RETURN u`, values );
+		}
+
+		if ( !user ) user = {};
+
+		keys_filter( user, UserKeys );
+
+		return cback ? cback( null, user ) : resolve( user );
+		/*=== d2r_end get_user_admin_get ===*/
+	} );
+};
+// }}}
+
 
 /**
  * This function initializes the module database tables.
