@@ -1159,6 +1159,29 @@ export const get_user_admin_get = ( req: ILRequest, id?: string, email?: string,
 };
 // }}}
 
+// {{{ get_user_remove_me ( req: ILRequest, cback: LCBack = null ): Promise<boolean>
+/**
+ * This method removes the current user from the system
+ *
+
+ *
+ */
+export const get_user_remove_me = ( req: ILRequest, cback: LCback = null ): Promise<boolean> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== d2r_start get_user_remove_me ===*/
+		let u: User = await user_get( req.user.id );
+
+		u.enabled = false;
+
+		await collection_add( _coll_users, u );
+		await get_user_logout( req );
+
+		return cback ? cback( null, true ) : resolve( true );
+		/*=== d2r_end get_user_remove_me ===*/
+	} );
+};
+// }}}
+
 
 /**
  * This function initializes the module database tables.
