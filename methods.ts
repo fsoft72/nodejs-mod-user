@@ -126,7 +126,7 @@ export const middleware_init = ( liwe: ILiWE ) => {
 };
 
 const _avatar_upload = async ( req: ILRequest, u: User ) => {
-	const up: Upload = await upload_add_file_name( req, 'avatar', 'user', u.id, 'avatars', null, false, null, u );
+	const up: Upload = await upload_add_file_name( req, 'avatar', 'user', u.id, 'avatars', null, false, null, u.id );
 
 	if ( !up?.id ) return;
 
