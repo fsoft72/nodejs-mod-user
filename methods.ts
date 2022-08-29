@@ -1,7 +1,7 @@
 
 import { ILRequest, ILResponse, LCback, ILiweConfig, ILError, ILiWE } from '../../liwe/types';
 import { mkid } from '../../liwe/utils';
-import { collection_add, collection_count, collection_find_all, collection_find_one, collection_find_one_dict, collection_find_all_dict, collection_del_one_dict, collection_del_all_dict, collection_init, prepare_filters } from '../../liwe/arangodb';
+import { collection_add, collection_count, collection_count_dict, collection_find_all, collection_find_one, collection_find_one_dict, collection_find_all_dict, collection_del_one_dict, collection_del_all_dict, collection_init, prepare_filters } from '../../liwe/arangodb';
 import { DocumentCollection } from 'arangojs/collection';
 import { $l } from '../../liwe/locale';
 
@@ -1179,6 +1179,28 @@ export const get_user_remove_me = ( req: ILRequest, cback: LCback = null ): Prom
 
 		return cback ? cback( null, true ) : resolve( true );
 		/*=== d2r_end get_user_remove_me ===*/
+	} );
+};
+// }}}
+
+// {{{ get_user_perms_get ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<boolean>
+/**
+ * This endpoint set returns full user permissions.
+
+ *
+ * @param id_user - The user id [req]
+ *
+ */
+export const get_user_perms_get = ( req: ILRequest, id_user: string, cback: LCback = null ): Promise<boolean> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== d2r_start get_user_perms_get ===*/
+		const err = { message: _( 'User not found' ) };
+		const user: User = await user_get( id_user );
+
+		if ( !user ) return cback ? cback( err ) : reject( err );
+
+		return cback ? cback( null, user.perms ) : resolve( user.perms );
+		/*=== d2r_end get_user_perms_get ===*/
 	} );
 };
 // }}}
