@@ -489,10 +489,10 @@ export const init = ( liwe: ILiWE ) => {
 
 		if ( ___errors.length ) return send_error ( res, { message: `Parameters error: ${___errors.join ( ', ' )}` } );
 
-		get_user_perms_get ( req,id_user,  ( err: ILError, ok: boolean ) => {
+		get_user_perms_get ( req,id_user,  ( err: ILError, perms: object ) => {
 			if ( err ) return send_error( res, err );
 
-			send_ok( res, { ok } );
+			send_ok( res, { perms } );
 		} );
 	} );
 

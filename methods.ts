@@ -232,7 +232,7 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
 
 // {{{ patch_user_admin_update ( req: ILRequest, id: string, email?: string, password?: string, name?: string, lastname?: string, enabled?: boolean, level?: number, language?: string, cback: LCBack = null ): Promise<User>
 /**
- *
+ * 
  *
  * @param id - The user id to be changed [req]
  * @param email - the new user email [opt]
@@ -1183,7 +1183,7 @@ export const get_user_remove_me = ( req: ILRequest, cback: LCback = null ): Prom
 };
 // }}}
 
-// {{{ get_user_perms_get ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<boolean>
+// {{{ get_user_perms_get ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<object>
 /**
  * This endpoint set returns full user permissions.
 
@@ -1191,7 +1191,7 @@ export const get_user_remove_me = ( req: ILRequest, cback: LCback = null ): Prom
  * @param id_user - The user id [req]
  *
  */
-export const get_user_perms_get = ( req: ILRequest, id_user: string, cback: LCback = null ): Promise<boolean> => {
+export const get_user_perms_get = ( req: ILRequest, id_user: string, cback: LCback = null ): Promise<object> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== d2r_start get_user_perms_get ===*/
 		const err = { message: _( 'User not found' ) };
