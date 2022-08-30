@@ -232,7 +232,7 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
 
 // {{{ patch_user_admin_update ( req: ILRequest, id: string, email?: string, password?: string, name?: string, lastname?: string, enabled?: boolean, level?: number, language?: string, cback: LCBack = null ): Promise<User>
 /**
- * 
+ *
  *
  * @param id - The user id to be changed [req]
  * @param email - the new user email [opt]
@@ -328,7 +328,16 @@ This function returns the full `User` structure
 export const patch_user_admin_fields = ( req: ILRequest, id: string, data: any, cback: LCback = null ): Promise<User> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== d2r_start patch_user_admin_fields ===*/
+		let u: User = await user_get( id );
+		const err = { message: _( 'User not found' ) };
 
+		if ( !u ) return cback ? cback( err ) : reject( err );
+
+		u = { ...u, ...data };
+
+		u = await collection_add( _coll_users, u, false, UserKeys );
+
+		return cback ? cback( null, u ) : resolve( u );
 		/*=== d2r_end patch_user_admin_fields ===*/
 	} );
 };
@@ -771,7 +780,7 @@ export const get_user_admin_list = ( req: ILRequest, tag?: string, cback: LCback
 
 		values.tag = tag;
 
-		const users = await collection_find_all( req.db, `FOR user IN ${ COLL_USERS } ${ filters } RETURN user`, values, UserKeys );
+		const users = await collection_find_all( req.db, `FOR user IN ${ COLL_USERS } ${ filters } SORT user.name, user.lastname RETURN user`, values, UserKeys );
 
 		return cback ? cback( null, users ) : resolve( users );
 		/*=== d2r_end get_user_admin_list ===*/
