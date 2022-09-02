@@ -1366,3 +1366,24 @@ export const user_session_create = ( req: ILRequest, user: User, cback: LCback =
 		/*=== d2r_end user_session_create ===*/
 	} );
 };
+
+/**
+ * This function returns all active users in the system.
+
+A user is considered active if it has:
+
+- `enabled` set to `true`
+- `deleted` is `null`
+ *
+ * @param req - the Request field [req]
+ *
+ */
+export const user_list = ( req: ILRequest, cback: LCback = null ): Promise<User[]> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== d2r_start user_list ===*/
+		const users = await collection_find_all_dict( req.db, COLL_USERS, { enabled: true, deleted: null }, UserKeys );
+
+		return cback ? cback( null, users ) : resolve( users );
+		/*=== d2r_end user_list ===*/
+	} );
+};
