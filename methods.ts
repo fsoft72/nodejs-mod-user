@@ -35,6 +35,7 @@ import { upload_add_file_name, upload_del_file } from '../upload/methods';
 import { Upload } from '../upload/types';
 import { address_add, address_user_list } from '../address/methods';
 import { Address } from '../address/types';
+import { perm_available } from '../../liwe/auth';
 
 export const user_get = async ( id?: string, email?: string, wallet?: string, facerec?: boolean ): Promise<User> => {
 	const [ filters, values ] = prepare_filters( 'u', { id, email, wallet } );
@@ -1192,7 +1193,7 @@ export const get_user_remove_me = ( req: ILRequest, cback: LCback = null ): Prom
 };
 // }}}
 
-// {{{ get_user_perms_get ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<object>
+// {{{ get_user_perms_get ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<boolean>
 /**
  * This endpoint set returns full user permissions.
 
@@ -1200,7 +1201,7 @@ export const get_user_remove_me = ( req: ILRequest, cback: LCback = null ): Prom
  * @param id_user - The user id [req]
  *
  */
-export const get_user_perms_get = ( req: ILRequest, id_user: string, cback: LCback = null ): Promise<object> => {
+export const get_user_perms_get = ( req: ILRequest, id_user: string, cback: LCback = null ): Promise<boolean> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== d2r_start get_user_perms_get ===*/
 		const err = { message: _( 'User not found' ) };
@@ -1210,6 +1211,32 @@ export const get_user_perms_get = ( req: ILRequest, id_user: string, cback: LCba
 
 		return cback ? cback( null, user.perms ) : resolve( user.perms );
 		/*=== d2r_end get_user_perms_get ===*/
+	} );
+};
+// }}}
+
+// {{{ get_user_faces_get ( req: ILRequest, id_user?: string, cback: LCBack = null ): Promise<UserFaceRec[]>
+/**
+ * Return all images available for face recognition
+
+If the `id_user` is not specified, the current logged user faces are returned.
+
+If the `id_user` is specified, but the user does not have the `user.create` permission, the `id_user` will be the one of the currently logged user.
+ *
+ * @param id_user - The User ID to get faces for [opt]
+ *
+ */
+export const get_user_faces_get = ( req: ILRequest, id_user?: string, cback: LCback = null ): Promise<UserFaceRec[]> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== d2r_start get_user_faces_get ===*/
+		if ( !id_user ) id_user = req.user.id;
+
+		if ( !perm_available( req.user, [ 'user.create' ] ) ) id_user = req.user.id;
+
+		const faces: UserFaceRec[] = await collection_find_all_dict( req.db, COLL_USER_FACERECS, { id_user } );
+
+		return cback ? cback( null, faces ) : resolve( faces );
+		/*=== d2r_end get_user_faces_get ===*/
 	} );
 };
 // }}}
@@ -1364,26 +1391,5 @@ export const user_session_create = ( req: ILRequest, user: User, cback: LCback =
 
 		return cback ? cback( null, tok ) : resolve( tok );
 		/*=== d2r_end user_session_create ===*/
-	} );
-};
-
-/**
- * This function returns all active users in the system.
-
-A user is considered active if it has:
-
-- `enabled` set to `true`
-- `deleted` is `null`
- *
- * @param req - the Request field [req]
- *
- */
-export const user_list = ( req: ILRequest, cback: LCback = null ): Promise<User[]> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== d2r_start user_list ===*/
-		const users = await collection_find_all_dict( req.db, COLL_USERS, { enabled: true, deleted: null }, UserKeys );
-
-		return cback ? cback( null, users ) : resolve( users );
-		/*=== d2r_end user_list ===*/
 	} );
 };
