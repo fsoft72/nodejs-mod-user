@@ -31,7 +31,7 @@ import { server_fullpath, upload_fullpath } from '../../liwe/liwe';
 import { SystemDomain } from '../system/types';
 import { system_domain_get_by_code, system_domain_get_by_session } from '../system/methods';
 import { session_create, session_del, session_get, session_id, session_remove_all } from '../session/methods';
-import { upload_add_file_name, upload_del_file } from '../upload/methods';
+import { upload_add_file_name, upload_del_file, upload_get } from '../upload/methods';
 import { Upload } from '../upload/types';
 import { address_add, address_user_list } from '../address/methods';
 import { Address } from '../address/types';
@@ -1233,10 +1233,50 @@ export const get_user_faces_get = ( req: ILRequest, id_user?: string, cback: LCb
 
 		if ( !perm_available( req.user, [ 'user.create' ] ) ) id_user = req.user.id;
 
-		const faces: UserFaceRec[] = await collection_find_all_dict( req.db, COLL_USER_FACERECS, { id_user } );
+		const faces: UserFaceRec[] = await collection_find_all_dict( req.db, COLL_USER_FACERECS, { id_user }, UserFaceRecKeys );
 
 		return cback ? cback( null, faces ) : resolve( faces );
 		/*=== d2r_end get_user_faces_get ===*/
+	} );
+};
+// }}}
+
+// {{{ post_user_upload2face ( req: ILRequest, id_upload: string, id_user?: string, cback: LCBack = null ): Promise<UserFaceRec>
+/**
+ *
+ *
+ * @param id_upload - The ID Upload [req]
+ * @param id_user - The user id [opt]
+ *
+ */
+export const post_user_upload2face = ( req: ILRequest, id_upload: string, id_user?: string, cback: LCback = null ): Promise<UserFaceRec> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== d2r_start post_user_upload2face ===*/
+		if ( !id_user ) id_user = req.user.id;
+
+		if ( !perm_available( req.user, [ 'user.create' ] ) ) id_user = req.user.id;
+
+		const upload: Upload = await upload_get( id_upload );
+
+		if ( !upload ) return cback ? cback( { message: _( 'Upload not found' ) } ) : reject( { message: _( 'Upload not found' ) } );
+
+		// deletes old entry if exists
+		await collection_del_one_dict( req.db, COLL_USER_FACERECS, { id_user, id_upload } );
+
+		// add new entry
+		const face: UserFaceRec = {
+			id: mkid( 'face' ),
+			id_user,
+			id_upload,
+			domain: upload.domain,
+			filename: upload.filename,
+			path: upload.path,
+		};
+
+		await collection_add( _coll_user_facerecs, face, false, UserFaceRecKeys );
+
+		return cback ? cback( null, face ) : resolve( face );
+		/*=== d2r_end post_user_upload2face ===*/
 	} );
 };
 // }}}
