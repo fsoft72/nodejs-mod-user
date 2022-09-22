@@ -6,7 +6,7 @@ import { locale_load } from '../../liwe/locale';
 import { perms } from '../../liwe/auth';
 
 import {
-	post_user_admin_add, patch_user_admin_update, delete_user_admin_del, patch_user_admin_fields, post_user_register, patch_user_update, post_user_avatar, post_user_facerec_add, post_user_password_forgot, post_user_password_reset, get_user_register_activate, post_user_tag, post_user_token, post_user_login, post_user_login_remote, get_user_admin_list, get_user_logout, get_user_me, post_user_perms_set, post_user_info_add, delete_user_info_del, patch_user_profile, get_user_test_create, patch_user_change_password, patch_user_set_bio, patch_user_set_billing, post_user_login_metamask, get_user_admin_get, get_user_remove_me, get_user_perms_get, get_user_faces_get, post_user_upload2face, user_db_init, user_facerec_get, user_session_del, user_session_get, user_session_create
+	post_user_admin_add, patch_user_admin_update, delete_user_admin_del, patch_user_admin_fields, post_user_register, patch_user_update, post_user_avatar, post_user_facerec_add, post_user_password_forgot, post_user_password_reset, get_user_register_activate, post_user_tag, post_user_token, post_user_login, post_user_login_remote, get_user_admin_list, get_user_logout, get_user_me, post_user_perms_set, post_user_info_add, delete_user_info_del, patch_user_profile, get_user_test_create, patch_user_change_password, patch_user_set_bio, patch_user_set_billing, post_user_login_metamask, get_user_admin_get, get_user_remove_me, get_user_perms_get, get_user_faces_get, post_user_upload2face, delete_user_face_del, user_db_init, user_facerec_get, user_session_del, user_session_get, user_session_create
 } from './methods';
 
 import {
@@ -522,6 +522,20 @@ export const init = ( liwe: ILiWE ) => {
 			if ( err ) return send_error( res, err );
 
 			send_ok( res, { face } );
+		} );
+	} );
+
+	app.delete ( "/api/user/face/del", perms( [ "is-logged" ] ), ( req: ILRequest, res: ILResponse ) => {
+		const { id_face, ___errors } = typed_dict( req.body, [
+			{ name: "id_face", type: "string", required: true }
+		] );
+
+		if ( ___errors.length ) return send_error ( res, { message: `Parameters error: ${___errors.join ( ', ' )}` } );
+
+		delete_user_face_del ( req,id_face,  ( err: ILError, id: string ) => {
+			if ( err ) return send_error( res, err );
+
+			send_ok( res, { id } );
 		} );
 	} );
 
