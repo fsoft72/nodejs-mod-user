@@ -1281,38 +1281,19 @@ export const post_user_upload2face = ( req: ILRequest, id_upload: string, id_use
 };
 // }}}
 
-// {{{ delete_user_face_del ( req: ILRequest, id_face: string, cback: LCBack = null ): Promise<string>
+// {{{ get_user_faces_modules ( req: ILRequest, cback: LCBack = null ): Promise<boolean>
 /**
- * Deletes a face assigned to a specific user.
-The call only needs the `id_face` of FaceRec to be deleted.
-
-If the user does have the `user.create` perm, he/she can delete the face of other users.
-
-If the user does **not** have the `user.create`, he/she can only delete his own faces.
  *
- * @param id_face - The ID Face to be deleted [req]
+ *
+
  *
  */
-export const delete_user_face_del = ( req: ILRequest, id_face: string, cback: LCback = null ): Promise<string> => {
+export const get_user_faces_modules = ( req: ILRequest, cback: LCback = null ): Promise<boolean> => {
 	return new Promise( async ( resolve, reject ) => {
-		/*=== d2r_start delete_user_face_del ===*/
-		const facerec: UserFaceRec = await collection_find_one_dict( req.db, COLL_USER_FACERECS, { id: id_face }, UserFaceRecKeys );
-		const err = { message: _( 'Face not found' ) };
+		/*=== d2r_start get_user_faces_modules ===*/
+		return cback ? cback( null, true ) : resolve( true );
 
-		if ( !facerec ) return cback ? cback( err ) : reject( err );
-
-		if ( !perm_available( req.user, [ 'user.create' ] ) && facerec.id_user !== req.user.id ) {
-			err.message = _( 'You do not have the permission to delete this face' );
-			return cback ? cback( err ) : reject( err );
-		}
-
-		await collection_del_one_dict( req.db, COLL_USER_FACERECS, { id: id_face } );
-
-		// also delete the upload file associated
-		await upload_del_file( facerec.id_upload );
-
-		return cback ? cback( null, id_face ) : resolve( id_face );
-		/*=== d2r_end delete_user_face_del ===*/
+		/*=== d2r_end get_user_faces_modules ===*/
 	} );
 };
 // }}}
