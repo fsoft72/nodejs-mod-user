@@ -233,7 +233,7 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
 
 // {{{ patch_user_admin_update ( req: ILRequest, id: string, email?: string, password?: string, name?: string, lastname?: string, enabled?: boolean, level?: number, language?: string, cback: LCBack = null ): Promise<User>
 /**
- *
+ * 
  *
  * @param id - The user id to be changed [req]
  * @param email - the new user email [opt]
@@ -1243,7 +1243,7 @@ export const get_user_faces_get = ( req: ILRequest, id_user?: string, cback: LCb
 
 // {{{ post_user_upload2face ( req: ILRequest, id_upload: string, id_user?: string, cback: LCBack = null ): Promise<UserFaceRec>
 /**
- *
+ * 
  *
  * @param id_upload - The ID Upload [req]
  * @param id_user - The user id [opt]
@@ -1277,23 +1277,6 @@ export const post_user_upload2face = ( req: ILRequest, id_upload: string, id_use
 
 		return cback ? cback( null, face ) : resolve( face );
 		/*=== d2r_end post_user_upload2face ===*/
-	} );
-};
-// }}}
-
-// {{{ get_user_faces_modules ( req: ILRequest, cback: LCBack = null ): Promise<boolean>
-/**
- *
- *
-
- *
- */
-export const get_user_faces_modules = ( req: ILRequest, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== d2r_start get_user_faces_modules ===*/
-		return cback ? cback( null, true ) : resolve( true );
-
-		/*=== d2r_end get_user_faces_modules ===*/
 	} );
 };
 // }}}
