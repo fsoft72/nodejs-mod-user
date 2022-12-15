@@ -6,9 +6,9 @@ import { DocumentCollection } from 'arangojs/collection';
 import { $l } from '../../liwe/locale';
 
 import {
-	User, UserActivationCode, UserActivationCodeKeys, UserFaceRec, UserFaceRecKeys,
-	UserKeys, UserPerms, UserPermsKeys, UserRegistration, UserRegistrationKeys,
-	UserSessionData, UserSessionDataKeys, 
+	User, UserActivationCode, UserActivationCodeKeys, UserDetails, UserDetailsKeys,
+	UserFaceRec, UserFaceRecKeys, UserKeys, UserPerms, UserPermsKeys,
+	UserRegistration, UserRegistrationKeys, UserSessionData, UserSessionDataKeys,
 } from './types';
 
 let _liwe: ILiWE = null;
@@ -199,7 +199,7 @@ const _create_user_session = async ( req: ILRequest, user: User ) => {
 /**
  *
  * This endpoint creates a valid user in the system, bypassing registration and verification phases.
- * 
+ *
  * @param email - The user email [req]
  * @param password - The user password [req]
  * @param name - The user first name [opt]
@@ -207,7 +207,7 @@ const _create_user_session = async ( req: ILRequest, user: User ) => {
  * @param perms - User permissions [opt]
  * @param enabled - Flag T/F to know if the user is enabled [opt]
  * @param language - The user language [opt]
- * 
+ *
  * @return user: User
  *
  */
@@ -246,7 +246,7 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
  * @param enabled - If the user is enabled or not [opt]
  * @param level - The user level [opt]
  * @param language - The user language [opt]
- * 
+ *
  * @return user: User
  *
  */
@@ -297,10 +297,10 @@ export const patch_user_admin_update = ( req: ILRequest, id: string, email?: str
 /**
  *
  * Deletes a user from the system
- * 
+ *
  * @param id_user - The user ID to be deleted [req]
- * 
- * @return id_user: str
+ *
+ * @return id_user: string
  *
  */
 export const delete_user_admin_del = ( req: ILRequest, id_user: string, cback: LCback = null ): Promise<string> => {
@@ -330,10 +330,10 @@ export const delete_user_admin_del = ( req: ILRequest, id_user: string, cback: L
  *
  * The call modifies a single field.
  * This function returns the full `User` structure
- * 
+ *
  * @param id - the user id [req]
  * @param data - The field / value to patch [req]
- * 
+ *
  * @return user: User
  *
  */
@@ -361,13 +361,13 @@ export const patch_user_admin_fields = ( req: ILRequest, id: string, data: any, 
  * Start the registration process of the user.
  * The call creates an entry inside the database (if no error is encountered)
  * If in **debug mode** this functyion returns  the `UserActivationCode`
- * 
+ *
  * @param email - the new user email [req]
  * @param password - the user password [req]
  * @param recaptcha - The recaptcha check code [req]
  * @param name - the user first name [opt]
  * @param lastname - the user lastname [opt]
- * 
+ *
  * @return uac: UserActivationCode
  *
  */
@@ -414,12 +414,12 @@ export const post_user_register = ( req: ILRequest, email: string, password: str
  *
  * Updates user data.
  * Only the user can update him/her self.
- * 
+ *
  * @param email - the new user email [opt]
  * @param password - the user password [opt]
  * @param name - the user name [opt]
  * @param lastname - the user lastname [opt]
- * 
+ *
  * @return user: User
  *
  */
@@ -448,9 +448,9 @@ export const patch_user_update = ( req: ILRequest, email?: string, password?: st
  *
  * Uploads a user avatar.
  * Only the user can update him/her self.
- * 
+ *
  * @param avatar - The user avatar file [req]
- * 
+ *
  * @return user: User
  *
  */
@@ -475,9 +475,9 @@ export const post_user_avatar = ( req: ILRequest, avatar: File, cback: LCback = 
  *
  * Uploads a user face for face recognition.
  * Only the user can update him/her self.
- * 
+ *
  * @param face - the user face photo [req]
- * 
+ *
  * @return facerec: UserFaceRec
  *
  */
@@ -503,11 +503,11 @@ export const post_user_facerec_add = ( req: ILRequest, face: File, cback: LCback
  * Start the 'Password forgotten' process for the user.
  * The call creates a temporary token for the user.
  * In **debug mode**  returns to the user the activation code as  ``str`` inside ``uac``.
- * 
+ *
  * @param email - the user email [req]
  * @param recaptcha - the recaptcha verification code [req]
- * 
- * @return uac: str
+ *
+ * @return uac: string
  *
  */
 export const post_user_password_forgot = ( req: ILRequest, email: string, recaptcha: string, cback: LCback = null ): Promise<string> => {
@@ -548,11 +548,11 @@ export const post_user_password_forgot = ( req: ILRequest, email: string, recapt
 /**
  *
  * Resets the user password.
- * 
+ *
  * @param email - the user email [req]
  * @param code - the activation code [req]
  * @param password - the new password [req]
- * 
+ *
  * @return ok: boolean
  *
  */
@@ -586,9 +586,9 @@ export const post_user_password_reset = ( req: ILRequest, email: string, code: s
 /**
  *
  * This is the activation request.
- * 
+ *
  * @param code - the activation code returned by the /api/register call [req]
- * 
+ *
  * @return user: User
  *
  */
@@ -615,10 +615,10 @@ export const get_user_register_activate = ( req: ILRequest, code: string, cback:
 /**
  *
  * This endpoint allows you to add tags to a user.
- * 
+ *
  * @param id_user - the user id [req]
  * @param tags -  A list of tags to be added to the user [req]
- * 
+ *
  * @return user: User
  *
  */
@@ -642,10 +642,10 @@ export const post_user_tag = ( req: ILRequest, id_user: string, tags: string[], 
  *
  * This endpoint implements the user authentication with the ``OAuth2`` protocol.
  * If the user is known, a JWT token with the running session is returned to the system.
- * 
+ *
  * @param username - it must contain the user email [req]
  * @param password - the user password [req]
- * 
+ *
  * @return __plain__: UserSessionData
  *
  */
@@ -679,11 +679,11 @@ export const post_user_token = ( req: ILRequest, username: string, password: str
  *
  * This endpoint implements the user authentication with ``login`` and ``password``.
  * If the user is known, a JWT token with the running session is returned to the system.
- * 
+ *
  * @param email - The user email [req]
  * @param password - the user password [req]
  * @param recaptcha - The recaptcha check code [req]
- * 
+ *
  * @return __plain__: UserSessionData
  *
  */
@@ -732,12 +732,12 @@ export const post_user_login = ( req: ILRequest, email: string, password: string
  * Since this is a public call, the `challenge` parameter is used to verify that the call is from the correct service.
  * The `challenge` parameter is a `MD5` hash created composing (`email` + `name` + `remote_secret_key` as set in the `data.json` config file under `security / remote`).
  * The `avatar` parameter is optional and it can contain an absolute URL to an image avatar of the user.
- * 
+ *
  * @param email - The user email [req]
  * @param name - The user name [req]
  * @param challenge - The challenge [req]
  * @param avatar - The user avatar [opt]
- * 
+ *
  * @return __plain__: UserSessionData
  *
  */
@@ -786,9 +786,9 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
  * If `domain` is specified, the list is filtered by domain.
  * If the user does not have the `system.admin` permission, only the users by his `domain` will be shown.
  * If `tag` is specified, the list is filtered by tag.
- * 
+ *
  * @param tag -  The tag to filter by [opt]
- * 
+ *
  * @return users: User
  *
  */
@@ -822,8 +822,8 @@ export const get_user_admin_list = ( req: ILRequest, tag?: string, cback: LCback
 /**
  *
  * This endpoint logs out the current user
- * 
- * 
+ *
+ *
  * @return ok: boolean
  *
  */
@@ -846,8 +846,8 @@ export const get_user_logout = ( req: ILRequest, cback: LCback = null ): Promise
 /**
  *
  * This endpoints returns all data related to the currently logged in user.
- * 
- * 
+ *
+ *
  * @return user: User
  *
  */
@@ -875,10 +875,10 @@ export const get_user_me = ( req: ILRequest, cback: LCback = null ): Promise<Use
  * This endpoint set the full user permissions.
  * The function will allow changing the permsissions only if the request comes from a logged user with the `user.perms` permission set.
  * If the  `system: [ 'admin' ]` permission is set to the user, it becomes a super user and can do **all** operations on the system.
- * 
+ *
  * @param id_user - The user id [req]
  * @param perms - A JSON of `UserPerms` structure [req]
- * 
+ *
  * @return ok: boolean
  *
  */
@@ -906,10 +906,10 @@ export const post_user_perms_set = ( req: ILRequest, id_user: string, perms: Use
  * If `key` was already present in the `extra` field, everything in `key` will be overwritten.
  * New `key`s will be added to `extra`.
  * If `key` is omitted (passing `''`)  the data is added to the `extra` root.
- * 
+ *
  * @param key - the  main key [req]
  * @param data - the new data to be added [req]
- * 
+ *
  * @return ok: boolean
  *
  */
@@ -932,9 +932,9 @@ export const post_user_info_add = ( req: ILRequest, key: string, data: any, cbac
 /**
  *
  * This endpoint deletes the specified `key` from the `extra` field.
- * 
+ *
  * @param key - The `key` to be deleted [req]
- * 
+ *
  * @return ok: boolean
  *
  */
@@ -958,7 +958,7 @@ export const delete_user_info_del = ( req: ILRequest, key: string, cback: LCback
  *
  * This is the first tab 'Profile' of the UserProfile interface.
  * You can change data only to the current loggedin user.
- * 
+ *
  * @param name - The user name [opt]
  * @param lastname - The user lastname [opt]
  * @param phone - User phone [opt]
@@ -974,7 +974,7 @@ export const delete_user_info_del = ( req: ILRequest, key: string, cback: LCback
  * @param linkedin - Linkedin user name [opt]
  * @param instagram - Instagram user name [opt]
  * @param website - User personal web site [opt]
- * 
+ *
  * @return user: User
  *
  */
@@ -1003,8 +1003,8 @@ export const patch_user_profile = ( req: ILRequest, name?: string, lastname?: st
 /**
  *
  * This endpoint creates a demo user
- * 
- * 
+ *
+ *
  * @return user: User
  *
  */
@@ -1025,11 +1025,11 @@ export const get_user_test_create = ( req: ILRequest, cback: LCback = null ): Pr
  *
  * This is the change password functionality for UserProfile tab.
  * You can change data only to the current loggedin user.
- * 
+ *
  * @param old_password - the old password [req]
  * @param new_password - the new password [req]
  * @param recaptcha - the recaptcha verfication code [req]
- * 
+ *
  * @return ok: boolean
  *
  */
@@ -1065,10 +1065,10 @@ export const patch_user_change_password = ( req: ILRequest, old_password: string
  *
  * Use this endpoint to update user `bio` or `tagline` (or both).
  * The currently logged in user can only change his/her own data.
- * 
+ *
  * @param tagline - User tagline [opt]
  * @param bio - User bio [opt]
- * 
+ *
  * @return user: User
  *
  */
@@ -1093,7 +1093,7 @@ export const patch_user_set_bio = ( req: ILRequest, tagline?: string, bio?: stri
  *
  * Creates / updates the user billing info.
  * You can change data only to the current loggedin user.
- * 
+ *
  * @param address - The street address [opt]
  * @param nr - The street address number [opt]
  * @param name - Address name [opt]
@@ -1106,7 +1106,7 @@ export const patch_user_set_bio = ( req: ILRequest, tagline?: string, bio?: stri
  * @param vat_number - VAT number [opt]
  * @param sdi - SDI code [opt]
  * @param pec - PEC email [opt]
- * 
+ *
  * @return user: User
  *
  */
@@ -1132,10 +1132,10 @@ export const patch_user_set_billing = ( req: ILRequest, address?: string, nr?: s
  * This endpoint logs in a user authenticated by a remote service.
  * Since this is a public call, the `challenge` parameter is used to verify that the call is from the correct service.
  * The `challenge` parameter is a `MD5` hash created composing (`address` + `remote_secret_key` as set in the `data.json` config file under `security / remote`).
- * 
+ *
  * @param address - The wallet address [req]
  * @param challenge - The challenge [req]
- * 
+ *
  * @return __plain__: UserSessionData
  *
  */
@@ -1181,12 +1181,12 @@ export const post_user_login_metamask = ( req: ILRequest, address: string, chall
  * This method can return a user after searching all users by some params.
  * Params are all optional, but at least one must be given, or the current user will be returned.
  * If the search returns more than one single user, only the first will be returned.
- * 
+ *
  * @param id - The user id [opt]
  * @param email - The user email [opt]
  * @param name - The user name [opt]
  * @param lastname - The user lastname [opt]
- * 
+ *
  * @return user: User
  *
  */
@@ -1219,8 +1219,8 @@ export const get_user_admin_get = ( req: ILRequest, id?: string, email?: string,
 /**
  *
  * This method removes the current user from the system
- * 
- * 
+ *
+ *
  * @return ok: boolean
  *
  */
@@ -1244,9 +1244,9 @@ export const get_user_remove_me = ( req: ILRequest, cback: LCback = null ): Prom
 /**
  *
  * This endpoint set returns full user permissions.
- * 
+ *
  * @param id_user - The user id [req]
- * 
+ *
  * @return ok: boolean
  *
  */
@@ -1270,9 +1270,9 @@ export const get_user_perms_get = ( req: ILRequest, id_user: string, cback: LCba
  * Return all images available for face recognition
  * If the `id_user` is not specified, the current logged user faces are returned.
  * If the `id_user` is specified, but the user does not have the `user.create` permission, the `id_user` will be the one of the currently logged user.
- * 
+ *
  * @param id_user - The User ID to get faces for [opt]
- * 
+ *
  * @return faces: UserFaceRec
  *
  */
@@ -1296,7 +1296,7 @@ export const get_user_faces_get = ( req: ILRequest, id_user?: string, cback: LCb
  *
  * @param id_upload - The ID Upload [req]
  * @param id_user - The user id [opt]
- * 
+ *
  * @return face: UserFaceRec
  *
  */
@@ -1332,13 +1332,29 @@ export const post_user_upload2face = ( req: ILRequest, id_upload: string, id_use
 };
 // }}}
 
+// {{{ get_user_faces_modules ( req: ILRequest, cback: LCBack = null ): Promise<boolean>
+/**
+ *
+ *
+ * @return ok: boolean
+ *
+ */
+export const get_user_faces_modules = ( req: ILRequest, cback: LCback = null ): Promise<boolean> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== f2c_start get_user_faces_modules ===*/
+
+		/*=== f2c_end get_user_faces_modules ===*/
+	} );
+};
+// }}}
+
 // {{{ user_db_init ( liwe: ILiWE, cback: LCBack = null ): Promise<boolean>
 /**
  *
  * This function initializes the module database tables.
- * 
+ *
  * @param liwe - LiWE full instance [req]
- * 
+ *
  * @return : boolean
  *
  */
@@ -1386,10 +1402,10 @@ export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boole
 /**
  *
  * Gets all Face Recs binded to a user
- * 
+ *
  * @param req - The ILRequest [req]
  * @param id_user - ID user [req]
- * 
+ *
  * @return : UserFaceRec
  *
  */
@@ -1408,10 +1424,10 @@ export const user_facerec_get = ( req: ILRequest, id_user: string, cback: LCback
 /**
  *
  * Removes a session from the system.
- * 
+ *
  * @param req - The ILRequest [req]
  * @param key - The Session key [req]
- * 
+ *
  * @return : boolean
  *
  */
@@ -1432,10 +1448,10 @@ export const user_session_del = ( req: ILiWE, key: string, cback: LCback = null 
  *
  * This function retrieves the session from the sessions collection, using the JWT token provided.
  * If the session is expired or does not exists, an empty object is returned.
- * 
+ *
  * @param req - The ILRequest [req]
  * @param tok - The JSON Web Token to decode [req]
- * 
+ *
  * @return : any
  *
  */
@@ -1466,11 +1482,11 @@ export const user_session_get = ( req: ILRequest, tok: string, cback: LCback = n
  * This function creates a new entry in the sessions collection.
  * If a session for the given user already exists, it will be deleted.
  * **NOTE** There cannot be more than one session for a given user / email at a time.
- * 
+ *
  * @param req - The ILRequest [req]
  * @param user - The user to create the session to [req]
- * 
- * @return : str
+ *
+ * @return : string
  *
  */
 export const user_session_create = ( req: ILRequest, user: User, cback: LCback = null ): Promise<string> => {

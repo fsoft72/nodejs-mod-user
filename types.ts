@@ -187,3 +187,25 @@ export const UserPermsKeys = {
 	'permissions': { type: 'string[]', priv: false },
 };
 
+/** UserDetails */
+export interface UserDetails {
+	/** the main id field */
+	id?: string;
+	/** User name */
+	name?: string;
+	/** User lastname */
+	lastname?: string;
+	/** User email */
+	email?: string;
+	/** User avatar path */
+	avatar?: string;
+}
+
+export const UserDetailsKeys = {
+	'id': { type: 'string', priv: false },
+	'name': { type: 'string', priv: false },
+	'lastname': { type: 'string', priv: false },
+	'email': { type: 'string', priv: false },
+	'avatar': { type: 'string', priv: false },
+};
+
