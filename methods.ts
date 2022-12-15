@@ -798,17 +798,17 @@ export const get_user_admin_list = ( req: ILRequest, tag?: string, cback: LCback
 		const domain = req.session.domain_code;
 		const [ filters, values ] = prepare_filters( "user", {
 			domain,
-			tags: {
-				name: 'tags',
-				val: tag,
-				mode: 'm'
-			},
 			deleted: {
 				mode: 'null'
+			},
+			tags: {
+				mode: 'a',
+				val: [ tag ],
+				name: 'tags'
 			}
 		} );
 
-		values.tag = tag;
+		// values.tag = tag;
 
 		const users = await collection_find_all( req.db, `FOR user IN ${ COLL_USERS } ${ filters } SORT user.name, user.lastname RETURN user`, values, UserKeys );
 

@@ -19,8 +19,8 @@
 			"tests": [
 				{
 					"field": "uac",
-					"mode": ">",
-					"value": "0"
+					"mode": "SIZE-GT",
+					"value": 0
 				}
 			],
 			"fields": [
@@ -54,7 +54,7 @@
 			"tests": [
 				{
 					"field": "access_token",
-					"mode": ">",
+					"mode": "SIZE-GT",
 					"value": 0
 				},
 				{
@@ -278,7 +278,8 @@
 			"method": "post",
 			"url": "/api/user/password-forgot",
 			"params": {
-				"email": "mario.rossiXXX@gmail.com"
+				"email": "mario.rossiXXX@gmail.com",
+				"recaptcha": "ciao"
 			},
 			"status_code": 400
 		},
@@ -286,7 +287,8 @@
 			"method": "post",
 			"url": "/api/user/password-forgot",
 			"params": {
-				"email": "mario.rossi.test@gmail.com"
+				"email": "mario.rossi.test@gmail.com",
+				"recaptcha": "ciao"
 			},
 			"fields": [
 				[

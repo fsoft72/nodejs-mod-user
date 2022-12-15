@@ -8,8 +8,9 @@
 			"method": "post",
 			"url": "/api/user/login",
 			"params": {
-				"email": "fabio.rotondo.test@gmail.com",
-				"password": "ciao123"
+				"email": "admin@gmail.com",
+				"password": "Ciao123!",
+				"recaptcha": "ciao"
 			},
 			"fields": [
 				[
@@ -19,26 +20,20 @@
 			]
 		},
 		{
-			"method": "get",
-			"url": "/api/user/me",
-			"auth": true,
-			"tests": [
-				{
-					"field": "user.name",
-					"mode": "EQUAL",
-					"value": "Fabio"
+			"method": "POST",
+			"url": "/api/user/perms_set",
+			"params": {
+				"id_user": "%(mario_id_user)s",
+				"perms": {
+					"user": [
+						"tag"
+					]
 				}
-			],
-			"fields": [
-				[
-					"user._id",
-					"fabio_uid"
-				]
-			]
+			}
 		},
 		{
 			"method": "post",
-			"url": "/api/tag/create",
+			"url": "/api/tag/admin/add",
 			"auth": true,
 			"params": {
 				"name": "student"
@@ -46,7 +41,7 @@
 		},
 		{
 			"method": "post",
-			"url": "/api/tag/create",
+			"url": "/api/tag/admin/add",
 			"auth": true,
 			"params": {
 				"name": "trainer"
@@ -54,16 +49,61 @@
 		},
 		{
 			"method": "post",
-			"url": "/api/user/create",
+			"url": "/api/user/admin/add",
 			"auth": true,
 			"params": {
 				"email": "tagme.user@gmail.com",
-				"password": "tag123"
+				"password": "Ciao123!"
 			},
 			"fields": [
 				[
-					"user._id",
+					"user.id",
 					"tag_user_id"
+				]
+			]
+		},
+		{
+			"method": "post",
+			"url": "/api/user/admin/add",
+			"auth": true,
+			"params": {
+				"email": "tagger@example.com",
+				"password": "Ciao123!",
+				"name": "Tagger",
+				"lastname": "Test"
+			},
+			"fields": [
+				[
+					"user.id",
+					"id_tagger"
+				]
+			]
+		},
+		{
+			"method": "post",
+			"url": "/api/user/perms_set",
+			"auth": true,
+			"params": {
+				"id_user": "%(id_tagger)s",
+				"perms": {
+					"user": [
+						"tag"
+					]
+				}
+			}
+		},
+		{
+			"method": "post",
+			"url": "/api/user/login",
+			"params": {
+				"email": "tagger@example.com",
+				"password": "Ciao123!",
+				"recaptcha": "ciao"
+			},
+			"fields": [
+				[
+					"access_token",
+					"token"
 				]
 			]
 		},
@@ -132,7 +172,7 @@
 			"url": "/api/user/tag",
 			"auth": true,
 			"params": {
-				"id_user": "%(fabio_uid)s",
+				"id_user": "%(id_tagger)s",
 				"tags": [
 					"trainer"
 				]
@@ -150,8 +190,23 @@
 			]
 		},
 		{
+			"method": "post",
+			"url": "/api/user/login",
+			"params": {
+				"email": "admin@gmail.com",
+				"password": "Ciao123!",
+				"recaptcha": "ciao"
+			},
+			"fields": [
+				[
+					"access_token",
+					"token"
+				]
+			]
+		},
+		{
 			"method": "get",
-			"url": "/api/user/list",
+			"url": "/api/user/admin/list",
 			"auth": true,
 			"params": {
 				"tag": "trainer"
@@ -166,7 +221,7 @@
 		},
 		{
 			"method": "get",
-			"url": "/api/user/list",
+			"url": "/api/user/admin/list",
 			"auth": true,
 			"params": {
 				"tag": "student"
