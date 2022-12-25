@@ -1,7 +1,6 @@
 
 import { ILRequest, ILResponse, LCback, ILiweConfig, ILError, ILiWE } from '../../liwe/types';
 import { mkid } from '../../liwe/utils';
-import { collection_add, collection_count, collection_count_dict, collection_find_all, collection_find_one, collection_find_one_dict, collection_find_all_dict, collection_del_one_dict, collection_del_all_dict, collection_init, prepare_filters } from '../../liwe/arangodb';
 import { DocumentCollection } from 'arangojs/collection';
 import { $l } from '../../liwe/locale';
 
@@ -38,13 +37,10 @@ import { Upload } from '../upload/types';
 import { address_add, address_user_list } from '../address/methods';
 import { Address } from '../address/types';
 import { perm_available } from '../../liwe/auth';
+import { adb_collection_init, adb_del_one, adb_find_all, adb_find_one, adb_prepare_filters, adb_query_all, adb_query_one, adb_record_add } from '../../liwe/db/arango';
 
 export const user_get = async ( id?: string, email?: string, wallet?: string, facerec?: boolean ): Promise<User> => {
-	const [ filters, values ] = prepare_filters( 'u', { id, email, wallet } );
-
-	if ( !filters.length ) return null;
-
-	const user: User = await collection_find_one( _liwe.db, `FOR u IN ${ COLL_USERS } ${ filters } RETURN u`, values );
+	const user: User = await adb_find_one( _liwe.db, COLL_USERS, { id, email, wallet } );
 
 	if ( !user ) return null;
 
@@ -224,10 +220,7 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
 			return cback ? cback( err ) : reject( err );
 
 		u = { id: mkid( 'user' ), email, password: sha512( password ), name, lastname, enabled, language };
-
-		// await _avatar_upload( req, u );
-
-		u = await collection_add( _coll_users, u, false, UserKeys );
+		u = await adb_record_add( req.db, COLL_USERS, u, UserKeys );
 
 		return cback ? cback( null, u ) : resolve( u );
 		/*=== f2c_end post_user_admin_add ===*/
@@ -284,8 +277,7 @@ export const patch_user_admin_update = ( req: ILRequest, id: string, email?: str
 		set_attr( u, "language", language );
 
 		u.email = u.email.toLowerCase();
-		// await _avatar_upload( req, u );
-		u = await collection_add( _coll_users, u, false, UserKeys );
+		u = await adb_record_add( req.db, COLL_USERS, u, UserKeys );
 
 		return cback ? cback( null, u ) : resolve( u );
 		/*=== f2c_end patch_user_admin_update ===*/
@@ -317,7 +309,7 @@ export const delete_user_admin_del = ( req: ILRequest, id_user: string, cback: L
 		u.enabled = false;
 		u.deleted = new Date();
 
-		await collection_add( _coll_users, u );
+		await adb_record_add( req.db, COLL_USERS, u );
 
 		return cback ? cback( null, id_user ) : resolve( id_user );
 		/*=== f2c_end delete_user_admin_del ===*/
@@ -345,9 +337,7 @@ export const patch_user_admin_fields = ( req: ILRequest, id: string, data: any, 
 
 		if ( !u ) return cback ? cback( err ) : reject( err );
 
-		u = { ...u, ...data };
-
-		u = await collection_add( _coll_users, u, false, UserKeys );
+		u = await adb_record_add( req.db, COLL_USERS, { ...u, ...data }, UserKeys );
 
 		return cback ? cback( null, u ) : resolve( u );
 		/*=== f2c_end patch_user_admin_fields ===*/
@@ -401,7 +391,7 @@ export const post_user_register = ( req: ILRequest, email: string, password: str
 			return cback ? cback( err ) : reject( err );
 		}
 
-		const res = await collection_add( _coll_users, dct );
+		await adb_record_add( req.db, COLL_USERS, dct );
 
 		return cback ? cback( null, code as any ) : resolve( code as any );
 		/*=== f2c_end post_user_register ===*/
@@ -435,7 +425,7 @@ export const patch_user_update = ( req: ILRequest, email?: string, password?: st
 
 		u = { ...u, ...keys_valid( { email, password, name, lastname } ) };
 
-		u = await collection_add( _coll_users, u, false, UserKeys );
+		u = await adb_record_add( req.db, COLL_USERS, u, UserKeys );
 
 		return cback ? cback( null, u ) : resolve( u );
 		/*=== f2c_end patch_user_update ===*/
@@ -462,7 +452,7 @@ export const post_user_avatar = ( req: ILRequest, avatar: File, cback: LCback = 
 
 		user.avatar = u.path;
 
-		user = await collection_add( _coll_users, user, false, UserKeys );
+		user = await adb_record_add( req.db, COLL_USERS, user, UserKeys );
 
 		return cback ? cback( null, user ) : resolve( user );
 		/*=== f2c_end post_user_avatar ===*/
@@ -489,7 +479,7 @@ export const post_user_facerec_add = ( req: ILRequest, face: File, cback: LCback
 
 		let fr: UserFaceRec = { id: mkid( 'face' ), domain: domain.code, id_user: req.user.id, id_upload: u.id, filename: u.filename };
 
-		fr = await collection_add( _coll_user_facerecs, fr, false, UserFaceRecKeys );
+		fr = await adb_record_add( req.db, COLL_USER_FACERECS, fr, UserFaceRecKeys );
 
 		return cback ? cback( null, fr ) : resolve( fr );
 		/*=== f2c_end post_user_facerec_add ===*/
@@ -513,7 +503,7 @@ export const post_user_facerec_add = ( req: ILRequest, face: File, cback: LCback
 export const post_user_password_forgot = ( req: ILRequest, email: string, recaptcha: string, cback: LCback = null ): Promise<string> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_password_forgot ===*/
-		let user: User = await collection_find_one( req.db, `FOR u IN ${ COLL_USERS } FILTER u.email == @email RETURN u`, { email } );
+		let user: User = await adb_query_one( req.db, `FOR u IN ${ COLL_USERS } FILTER u.email == @email RETURN u`, { email } );
 		const err = { message: _( 'User not found' ) };
 
 		const rc = await _recaptcha_check( req, recaptcha, err );
@@ -526,7 +516,7 @@ export const post_user_password_forgot = ( req: ILRequest, email: string, recapt
 
 		user.code = random_string( 30, 30, false );
 
-		user = await collection_add( _coll_users, user );
+		user = await adb_record_add( req.db, COLL_USERS, user );
 
 		// NOTE: code is sent only if req.cfg.debug is enabled
 		const code = req.cfg.debug?.enabled && req.cfg.debug?.send_code ? user.code : '';
@@ -559,7 +549,7 @@ export const post_user_password_forgot = ( req: ILRequest, email: string, recapt
 export const post_user_password_reset = ( req: ILRequest, email: string, code: string, password: string, cback: LCback = null ): Promise<boolean> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_password_reset ===*/
-		const user = await collection_find_one( _liwe.db, `FOR u IN ${ COLL_USERS } FILTER u.email == @email RETURN u`, { email } );
+		const user = await adb_query_one( _liwe.db, `FOR u IN ${ COLL_USERS } FILTER u.email == @email RETURN u`, { email } );
 		const err = { message: _( 'User not found' ) };
 		if ( !user ) {
 			add_suspicious_activity( req, req.res, "Password reset request for unknown email address" );
@@ -574,7 +564,7 @@ export const post_user_password_reset = ( req: ILRequest, email: string, code: s
 
 		user.password = sha512( password );
 
-		await collection_add( _coll_users, user );
+		await adb_record_add( _liwe.db, COLL_USERS, user );
 
 		return cback ? cback( null, true ) : resolve( true );
 		/*=== f2c_end post_user_password_reset ===*/
@@ -595,7 +585,7 @@ export const post_user_password_reset = ( req: ILRequest, email: string, code: s
 export const get_user_register_activate = ( req: ILRequest, code: string, cback: LCback = null ): Promise<User> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start get_user_register_activate ===*/
-		const u: User = await collection_find_one( _liwe.db, `FOR u IN ${ COLL_USERS } FILTER u.code == @code RETURN u`, { code } );
+		const u: User = await adb_query_one( _liwe.db, `FOR u IN ${ COLL_USERS } FILTER u.code == @code RETURN u`, { code } );
 		const err = { message: _( 'User not found' ) };
 		if ( !u ) return cback ? cback( err ) : reject( err );
 
@@ -603,7 +593,7 @@ export const get_user_register_activate = ( req: ILRequest, code: string, cback:
 		// u.visible = true;
 		u.code = null;
 
-		await collection_add( _coll_users, u );
+		await adb_record_add( _liwe.db, COLL_USERS, u );
 
 		return cback ? cback( null, u ) : resolve( u );
 		/*=== f2c_end get_user_register_activate ===*/
@@ -629,7 +619,7 @@ export const post_user_tag = ( req: ILRequest, id_user: string, tags: string[], 
 
 		user = await tag_obj( req, tags, user, 'user' ) as any;
 
-		user = await collection_add( _coll_users, user );
+		user = await adb_record_add( _liwe.db, COLL_USERS, user );
 
 		return cback ? cback( null, user ) : resolve( user );
 		/*=== f2c_end post_user_tag ===*/
@@ -652,8 +642,8 @@ export const post_user_tag = ( req: ILRequest, id_user: string, tags: string[], 
 export const post_user_token = ( req: ILRequest, username: string, password: string, cback: LCback = null ): Promise<UserSessionData> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_token ===*/
-		const [ filters, values ] = prepare_filters( 'u', { email: username, password: sha512( password ), enabled: true } );
-		const u: User = await collection_find_one( _liwe.db, `FOR u IN ${ COLL_USERS } ${ filters } RETURN u`, values );
+		const [ filters, values ] = adb_prepare_filters( 'u', { email: username, password: sha512( password ), enabled: true } );
+		const u: User = await adb_query_one( _liwe.db, `FOR u IN ${ COLL_USERS } ${ filters } RETURN u`, values );
 		const err = { message: _( 'User not found' ) };
 
 		if ( !u ) {
@@ -768,7 +758,7 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
 			// extract name and lastname from string
 			const [ name_, lastname ] = name.split( ' ' );
 			user = { id: mkid( 'user' ), email, password: sha512( mkid( 'temp' ) ), name: name_, lastname, enabled: true, language: 'en', avatar };
-			user = await collection_add( _coll_users, user, false, UserKeys );
+			user = await adb_record_add( req.db, COLL_USERS, user, UserKeys );
 		}
 
 		// If the user exists we create a valid session and return
@@ -796,7 +786,7 @@ export const get_user_admin_list = ( req: ILRequest, tag?: string, cback: LCback
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start get_user_admin_list ===*/
 		const domain = req.session.domain_code;
-		const [ filters, values ] = prepare_filters( "user", {
+		const [ filters, values ] = adb_prepare_filters( "user", {
 			domain,
 			deleted: {
 				mode: 'null'
@@ -808,9 +798,7 @@ export const get_user_admin_list = ( req: ILRequest, tag?: string, cback: LCback
 			}
 		} );
 
-		// values.tag = tag;
-
-		const users = await collection_find_all( req.db, `FOR user IN ${ COLL_USERS } ${ filters } SORT user.name, user.lastname RETURN user`, values, UserKeys );
+		const users = await adb_query_all( req.db, `FOR user IN ${ COLL_USERS } ${ filters } SORT user.name, user.lastname RETURN user`, values, UserKeys );
 
 		return cback ? cback( null, users ) : resolve( users );
 		/*=== f2c_end get_user_admin_list ===*/
@@ -891,7 +879,7 @@ export const post_user_perms_set = ( req: ILRequest, id_user: string, perms: Use
 		if ( !user ) return cback ? cback( err ) : reject( err );
 
 		user.perms = perms as any;
-		await collection_add( _coll_users, user );
+		await adb_record_add( req.db, COLL_USERS, user );
 
 		return cback ? cback( null, true ) : resolve( true );
 		/*=== f2c_end post_user_perms_set ===*/
@@ -920,7 +908,7 @@ export const post_user_info_add = ( req: ILRequest, key: string, data: any, cbac
 
 		if ( key ) u.extra[ key ] = data;
 
-		await collection_add( _coll_users, u );
+		await adb_record_add( req.db, COLL_USERS, u );
 
 		return cback ? cback( null, 1 ) : resolve( 1 as any );
 		/*=== f2c_end post_user_info_add ===*/
@@ -945,7 +933,7 @@ export const delete_user_info_del = ( req: ILRequest, key: string, cback: LCback
 
 		u.extra[ key ] = '__@@_invalid_@@__';
 
-		await collection_add( _coll_users, u );
+		await adb_record_add( req.db, COLL_USERS, u );
 
 		return cback ? cback( null, true ) : resolve( true );
 		/*=== f2c_end delete_user_info_del ===*/
@@ -988,7 +976,7 @@ export const patch_user_profile = ( req: ILRequest, name?: string, lastname?: st
 
 		u = { ...u, ...keys_valid( { name, lastname, phone, facebook, twitter, linkedin, instagram, website } ) };
 
-		await collection_add( _coll_users, u );
+		await adb_record_add( req.db, COLL_USERS, u );
 		await address_add( req, u.id, addr_street, addr_nr, "home", "home", addr_city, addr_zip, addr_state, addr_country, null, null, null, null, null, null, true );
 
 		await _addresses_add( req, u );
@@ -1012,7 +1000,7 @@ export const get_user_test_create = ( req: ILRequest, cback: LCback = null ): Pr
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start get_user_test_create ===*/
 		const user = { "email": "mario.rossi@gmail.com", "password": sha512( "Ciao123!" ), "enabled": true, "created": Date(), name: "Mario", lastname: "Rossi" };
-		await collection_add( _coll_users, user );
+		await adb_record_add( req.db, COLL_USERS, user );
 
 		return cback ? cback( null, user ) : resolve( user as any );
 		/*=== f2c_end get_user_test_create ===*/
@@ -1052,7 +1040,7 @@ export const patch_user_change_password = ( req: ILRequest, old_password: string
 
 		user.password = sha512( new_password, false );
 
-		await collection_add( _coll_users, user, false );
+		await adb_record_add( req.db, COLL_USERS, user );
 
 		return cback ? cback( null, true ) : resolve( true );
 		/*=== f2c_end patch_user_change_password ===*/
@@ -1080,7 +1068,7 @@ export const patch_user_set_bio = ( req: ILRequest, tagline?: string, bio?: stri
 		if ( tagline ) user.tagline = tagline;
 		if ( bio ) user.bio = bio;
 
-		user = await collection_add( _coll_users, user, false, UserKeys );
+		user = await adb_record_add( req.db, COLL_USERS, user, UserKeys );
 
 		return cback ? cback( null, user ) : resolve( user );
 		/*=== f2c_end patch_user_set_bio ===*/
@@ -1193,13 +1181,13 @@ export const post_user_login_metamask = ( req: ILRequest, address: string, chall
 export const get_user_admin_get = ( req: ILRequest, id?: string, email?: string, name?: string, lastname?: string, cback: LCback = null ): Promise<User> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start get_user_admin_get ===*/
-		const [ filters, values ] = prepare_filters( 'u', { id, email, name, lastname } );
+		const [ filters, values ] = adb_prepare_filters( 'u', { id, email, name, lastname } );
 		let user: User = null;
 
 		if ( !Object.keys( filters ).length ) {
 			user = await user_get( req.user.id );
 		} else {
-			user = await collection_find_one( req.db, `
+			user = await adb_query_one( req.db, `
 			FOR u IN users
 				${ filters }
 				RETURN u`, values );
@@ -1231,7 +1219,7 @@ export const get_user_remove_me = ( req: ILRequest, cback: LCback = null ): Prom
 
 		u.enabled = false;
 
-		await collection_add( _coll_users, u );
+		await adb_record_add( req.db, COLL_USERS, u );
 		await get_user_logout( req );
 
 		return cback ? cback( null, true ) : resolve( true );
@@ -1283,7 +1271,7 @@ export const get_user_faces_get = ( req: ILRequest, id_user?: string, cback: LCb
 
 		if ( !perm_available( req.user, [ 'user.create' ] ) ) id_user = req.user.id;
 
-		const faces: UserFaceRec[] = await collection_find_all_dict( req.db, COLL_USER_FACERECS, { id_user }, UserFaceRecKeys );
+		const faces: UserFaceRec[] = await adb_find_all( req.db, COLL_USER_FACERECS, { id_user }, UserFaceRecKeys );
 
 		return cback ? cback( null, faces ) : resolve( faces );
 		/*=== f2c_end get_user_faces_get ===*/
@@ -1312,7 +1300,7 @@ export const post_user_upload2face = ( req: ILRequest, id_upload: string, id_use
 		if ( !upload ) return cback ? cback( { message: _( 'Upload not found' ) } ) : reject( { message: _( 'Upload not found' ) } );
 
 		// deletes old entry if exists
-		await collection_del_one_dict( req.db, COLL_USER_FACERECS, { id_user, id_upload } );
+		await adb_del_one( req.db, COLL_USER_FACERECS, { id_user, id_upload } );
 
 		// add new entry
 		const face: UserFaceRec = {
@@ -1324,7 +1312,7 @@ export const post_user_upload2face = ( req: ILRequest, id_upload: string, id_use
 			path: upload.path,
 		};
 
-		await collection_add( _coll_user_facerecs, face, false, UserFaceRecKeys );
+		await adb_record_add( req.db, COLL_USER_FACERECS, face, UserFaceRecKeys );
 
 		return cback ? cback( null, face ) : resolve( face );
 		/*=== f2c_end post_user_upload2face ===*/
@@ -1362,14 +1350,14 @@ export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boole
 	return new Promise( async ( resolve, reject ) => {
 		_liwe = liwe;
 
-		_coll_user_facerecs = await collection_init( liwe.db, COLL_USER_FACERECS, [
+		_coll_user_facerecs = await adb_collection_init( liwe.db, COLL_USER_FACERECS, [
 			{ type: "persistent", fields: [ "id" ], unique: true },
 			{ type: "persistent", fields: [ "domain" ], unique: false },
 			{ type: "persistent", fields: [ "id_user" ], unique: false },
 			{ type: "persistent", fields: [ "id_upload" ], unique: true },
 		], { drop: false } );
 
-		_coll_users = await collection_init( liwe.db, COLL_USERS, [
+		_coll_users = await adb_collection_init( liwe.db, COLL_USERS, [
 			{ type: "persistent", fields: [ "id" ], unique: true },
 			{ type: "persistent", fields: [ "domain" ], unique: false },
 			{ type: "persistent", fields: [ "email" ], unique: true },
@@ -1386,10 +1374,10 @@ export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boole
 			u.password = sha512( u.password );
 			u.id = mkid( 'user' );
 			delete u.u_id;
-			const ck = await collection_find_one( liwe.db, `FOR u IN ${ COLL_USERS } FILTER u.email == @email RETURN u.id`, { email: u.email } );
+			const ck = await adb_query_one( liwe.db, `FOR u IN ${ COLL_USERS } FILTER u.email == @email RETURN u.id`, { email: u.email } );
 			if ( ck ) return true;
 
-			return collection_add( _coll_users, u );
+			return adb_record_add( liwe.db, COLL_USERS, u );
 		} ) );
 
 		return cback ? cback( null, _liwe.db ) : resolve( _liwe.db );
@@ -1412,7 +1400,7 @@ export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boole
 export const user_facerec_get = ( req: ILRequest, id_user: string, cback: LCback = null ): Promise<UserFaceRec[]> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start user_facerec_get ===*/
-		const faces: UserFaceRec[] = await collection_find_all_dict( req.db, COLL_USER_FACERECS, { id_user }, UserFaceRecKeys );
+		const faces: UserFaceRec[] = await adb_find_all( req.db, COLL_USER_FACERECS, { id_user }, UserFaceRecKeys );
 
 		return cback ? cback( null, faces ) : resolve( faces );
 		/*=== f2c_end user_facerec_get ===*/
