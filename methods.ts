@@ -617,7 +617,7 @@ export const post_user_tag = ( req: ILRequest, id_user: string, tags: string[], 
 		/*=== f2c_start post_user_tag ===*/
 		let user = await user_get( id_user );
 
-		user = await tag_obj( req, tags, user, 'user' ) as any;
+		user = await tag_obj( req, tags, id_user, 'user' ) as any;
 
 		user = await adb_record_add( _liwe.db, COLL_USERS, user );
 
@@ -1336,56 +1336,6 @@ export const get_user_faces_modules = ( req: ILRequest, cback: LCback = null ): 
 };
 // }}}
 
-// {{{ user_db_init ( liwe: ILiWE, cback: LCBack = null ): Promise<boolean>
-/**
- *
- * This function initializes the module database tables.
- *
- * @param liwe - LiWE full instance [req]
- *
- * @return : boolean
- *
- */
-export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		_liwe = liwe;
-
-		_coll_user_facerecs = await adb_collection_init( liwe.db, COLL_USER_FACERECS, [
-			{ type: "persistent", fields: [ "id" ], unique: true },
-			{ type: "persistent", fields: [ "domain" ], unique: false },
-			{ type: "persistent", fields: [ "id_user" ], unique: false },
-			{ type: "persistent", fields: [ "id_upload" ], unique: true },
-		], { drop: false } );
-
-		_coll_users = await adb_collection_init( liwe.db, COLL_USERS, [
-			{ type: "persistent", fields: [ "id" ], unique: true },
-			{ type: "persistent", fields: [ "domain" ], unique: false },
-			{ type: "persistent", fields: [ "email" ], unique: true },
-			{ type: "persistent", fields: [ "enabled" ], unique: false },
-			{ type: "persistent", fields: [ "tags[*]" ], unique: false },
-			{ type: "persistent", fields: [ "id_upload" ], unique: false },
-			{ type: "persistent", fields: [ "deleted" ], unique: false },
-		], { drop: false } );
-
-		/*=== f2c_start user_db_init ===*/
-
-		// Create system users
-		await Promise.all( _liwe.cfg.user.users.map( async ( u: any ) => {
-			u.password = sha512( u.password );
-			u.id = mkid( 'user' );
-			delete u.u_id;
-			const ck = await adb_query_one( liwe.db, `FOR u IN ${ COLL_USERS } FILTER u.email == @email RETURN u.id`, { email: u.email } );
-			if ( ck ) return true;
-
-			return adb_record_add( liwe.db, COLL_USERS, u );
-		} ) );
-
-		return cback ? cback( null, _liwe.db ) : resolve( _liwe.db );
-		/*=== f2c_end user_db_init ===*/
-	} );
-};
-// }}}
-
 // {{{ user_facerec_get ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<UserFaceRec[]>
 /**
  *
@@ -1505,6 +1455,56 @@ export const user_session_create = ( req: ILRequest, user: User, cback: LCback =
 
 		return cback ? cback( null, tok ) : resolve( tok );
 		/*=== f2c_end user_session_create ===*/
+	} );
+};
+// }}}
+
+// {{{ user_db_init ( liwe: ILiWE, cback: LCBack = null ): Promise<boolean>
+/**
+ *
+ * Initializes the module's database
+ *
+ * @param liwe - The Liwe object [req]
+ *
+ * @return : boolean
+ *
+ */
+export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boolean> => {
+	return new Promise( async ( resolve, reject ) => {
+		_liwe = liwe;
+
+		_coll_user_facerecs = await adb_collection_init( liwe.db, COLL_USER_FACERECS, [
+			{ type: "persistent", fields: [ "id" ], unique: true },
+			{ type: "persistent", fields: [ "domain" ], unique: false },
+			{ type: "persistent", fields: [ "id_user" ], unique: false },
+			{ type: "persistent", fields: [ "id_upload" ], unique: true },
+		], { drop: false } );
+
+		_coll_users = await adb_collection_init( liwe.db, COLL_USERS, [
+			{ type: "persistent", fields: [ "id" ], unique: true },
+			{ type: "persistent", fields: [ "domain" ], unique: false },
+			{ type: "persistent", fields: [ "email" ], unique: true },
+			{ type: "persistent", fields: [ "enabled" ], unique: false },
+			{ type: "persistent", fields: [ "tags[*]" ], unique: false },
+			{ type: "persistent", fields: [ "id_upload" ], unique: false },
+			{ type: "persistent", fields: [ "deleted" ], unique: false },
+		], { drop: false } );
+
+		/*=== f2c_start user_db_init ===*/
+
+		// Create system users
+		await Promise.all( _liwe.cfg.user.users.map( async ( u: any ) => {
+			u.password = sha512( u.password );
+			u.id = mkid( 'user' );
+			delete u.u_id;
+			const ck = await adb_query_one( liwe.db, `FOR u IN ${ COLL_USERS } FILTER u.email == @email RETURN u.id`, { email: u.email } );
+			if ( ck ) return true;
+
+			return adb_record_add( liwe.db, COLL_USERS, u );
+		} ) );
+
+		return cback ? cback( null, _liwe.db ) : resolve( _liwe.db );
+		/*=== f2c_end user_db_init ===*/
 	} );
 };
 // }}}
