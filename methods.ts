@@ -55,6 +55,10 @@ export const user_get = async ( id?: string, email?: string, wallet?: string, fa
 	return user;
 };
 
+const user_create = ( email: string, password: string, name: string, lastname: string, enabled: boolean, language: string ) => {
+	return { id: mkid( 'user' ), email, password: sha512( password ), name, lastname, enabled, language };
+};
+
 const _valid_password = ( pwd: string, err: any, cfg: ILiweConfig ) => {
 	if ( !cfg.user.password ) return true;
 
@@ -1332,6 +1336,36 @@ export const get_user_faces_modules = ( req: ILRequest, cback: LCback = null ): 
 		/*=== f2c_start get_user_faces_modules ===*/
 
 		/*=== f2c_end get_user_faces_modules ===*/
+	} );
+};
+// }}}
+
+// {{{ post_user_anonymous ( req: ILRequest, ts: string, challenge: string, cback: LCBack = null ): Promise<User>
+/**
+ *
+ * This method is used when you need a temporary session for a user.
+ * It creates a *real* user in the database, with fake data.
+ * Users have a 24 hours life span, if not converted into "real" users, they are deleted.
+ *
+ * @param ts - The generated random number [req]
+ * @param challenge - The challenge [req]
+ *
+ * @return user: User
+ *
+ */
+export const post_user_anonymous = ( req: ILRequest, ts: string, challenge: string, cback: LCback = null ): Promise<User> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== f2c_start post_user_anonymous ===*/
+		const valid = challenge_check( challenge, [ ts ] );
+		const err = { message: _( 'Invalid challenge' ) };
+
+		if ( !valid ) return cback ? cback( err ) : reject( err );
+
+		const user: User = user_create( `${ ts }@anonymous.me`, challenge, 'guest', 'user', true, 'it' );
+
+		await adb_record_add( req.db, COLL_USERS, user, UserKeys );
+
+		/*=== f2c_end post_user_anonymous ===*/
 	} );
 };
 // }}}

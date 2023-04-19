@@ -93,7 +93,7 @@ export interface User {
 	/** The date when the user has been deleted */
 	deleted?: Date;
 	/** Addresses binded to the user */
-	addresses?: any;
+	addresses?: Address[];
 	/** Facebook account */
 	facebook?: string;
 	/** Twitter account */
@@ -131,7 +131,7 @@ export const UserKeys = {
 	'tags': { type: 'string[]', priv: false },
 	'id_upload': { type: 'string', priv: true },
 	'deleted': { type: 'Date', priv: true },
-	'addresses': { type: 'any', priv: false },
+	'addresses': { type: 'Address[]', priv: false },
 	'facebook': { type: 'string', priv: false },
 	'twitter': { type: 'string', priv: false },
 	'linkedin': { type: 'string', priv: false },
