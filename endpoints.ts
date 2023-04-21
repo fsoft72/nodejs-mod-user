@@ -9,7 +9,6 @@ import { locale_load } from '../../liwe/locale';
 import { perms } from '../../liwe/auth';
 
 import {
-	user_db_init,
 	// endpoints function
 	delete_user_admin_del, delete_user_info_del, get_user_admin_get, get_user_admin_list, get_user_faces_get,
 	get_user_faces_modules, get_user_logout, get_user_me, get_user_perms_get, get_user_register_activate,

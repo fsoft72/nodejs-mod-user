@@ -1364,7 +1364,6 @@ export const post_user_anonymous = ( req: ILRequest, ts: string, challenge: stri
 		const user: User = user_create( `${ ts }@anonymous.me`, challenge, 'guest', 'user', true, 'it' );
 
 		await adb_record_add( req.db, COLL_USERS, user, UserKeys );
-
 		/*=== f2c_end post_user_anonymous ===*/
 	} );
 };
