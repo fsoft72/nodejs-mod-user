@@ -92,7 +92,7 @@
 			"url": "/api/user/login",
 			"params": {
 				"email": "admin@gmail.com",
-				"password": "Ciao123!",
+				"password": "UserAdmin1!",
 				"recaptcha": "ciao"
 			},
 			"fields": [
@@ -171,7 +171,7 @@
 			"url": "/api/user/login",
 			"params": {
 				"email": "admin@gmail.com",
-				"password": "Ciao123!",
+				"password": "UserAdmin1!",
 				"recaptcha": "ciao"
 			},
 			"fields": [
@@ -200,7 +200,7 @@
 			"params": {
 				"email": "mario.rossi.test@gmail.com",
 				"password": "Ciao123!",
-				"recaptcha": "ciao"
+				"recaptcha": "test"
 			},
 			"fields": [
 				[
@@ -381,7 +381,7 @@
 			"url": "/api/user/login",
 			"params": {
 				"email": "admin@gmail.com",
-				"password": "Ciao123!",
+				"password": "UserAdmin1!",
 				"recaptcha": "ciao"
 			},
 			"fields": [
