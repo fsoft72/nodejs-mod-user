@@ -66,6 +66,7 @@ export interface User {
 	domain?: string;
 	/** The user email */
 	email?: string;
+	username?: string;
 	/** User name */
 	name?: string;
 	/** User lastname */
@@ -84,6 +85,8 @@ export interface User {
 	extra?: any;
 	/** Preferred language */
 	language?: string;
+	/** The user main phone */
+	phone?: string;
 	/** The user Avatar URL */
 	avatar?: string;
 	/** tags for the type */
@@ -118,6 +121,7 @@ export const UserKeys = {
 	'id': { type: 'string', priv: false },
 	'domain': { type: 'string', priv: true },
 	'email': { type: 'string', priv: false },
+	'username': { type: 'string', priv: false },
 	'name': { type: 'string', priv: false },
 	'lastname': { type: 'string', priv: false },
 	'perms': { type: 'any', priv: false },
@@ -127,6 +131,7 @@ export const UserKeys = {
 	'code': { type: 'string', priv: true },
 	'extra': { type: 'any', priv: false },
 	'language': { type: 'string', priv: false },
+	'phone': { type: 'string', priv: false },
 	'avatar': { type: 'string', priv: false },
 	'tags': { type: 'string[]', priv: false },
 	'id_upload': { type: 'string', priv: true },

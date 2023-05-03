@@ -16,9 +16,6 @@ const _ = ( txt: string, vals: any = null, plural = false ) => {
 	return $l( txt, vals, plural, "user" );
 };
 
-let _coll_user_facerecs: DocumentCollection = null;
-let _coll_users: DocumentCollection = null;
-
 const COLL_USER_FACERECS = "user_facerecs";
 const COLL_USERS = "users";
 
@@ -39,8 +36,20 @@ import { Address } from '../address/types';
 import { perm_available } from '../../liwe/auth';
 import { adb_collection_init, adb_del_one, adb_find_all, adb_find_one, adb_prepare_filters, adb_query_all, adb_query_one, adb_record_add } from '../../liwe/db/arango';
 
-export const user_get = async ( id?: string, email?: string, wallet?: string, facerec?: boolean ): Promise<User> => {
-	const user: User = await adb_find_one( _liwe.db, COLL_USERS, { id, email, wallet } );
+export const check_username = async ( req: ILRequest, username: string ): Promise<boolean> => {
+	const user: User = await adb_find_one( req.db, COLL_USERS, { username } );
+
+	return user ? false : true;
+};
+
+export const check_email = async ( req: ILRequest, email: string ): Promise<boolean> => {
+	const user: User = await adb_find_one( req.db, COLL_USERS, { email } );
+
+	return user ? false : true;
+};
+
+export const user_get = async ( id?: string, email?: string, wallet?: string, facerec?: boolean, username?: string, phone?: string ): Promise<User> => {
+	const user: User = await adb_find_one( _liwe.db, COLL_USERS, { id, email, wallet, username, phone } );
 
 	if ( !user ) return null;
 
@@ -349,7 +358,7 @@ export const patch_user_admin_fields = ( req: ILRequest, id: string, data: any, 
 };
 // }}}
 
-// {{{ post_user_register ( req: ILRequest, email: string, password: string, recaptcha: string, name?: string, lastname?: string, cback: LCBack = null ): Promise<UserActivationCode>
+// {{{ post_user_register ( req: ILRequest, email: string, password: string, recaptcha: string, name?: string, lastname?: string, phone?: string, username?: string, cback: LCBack = null ): Promise<UserActivationCode>
 /**
  *
  * Start the registration process of the user.
@@ -361,25 +370,52 @@ export const patch_user_admin_fields = ( req: ILRequest, id: string, data: any, 
  * @param recaptcha - The recaptcha check code [req]
  * @param name - the user first name [opt]
  * @param lastname - the user lastname [opt]
+ * @param phone - the user phone [opt]
+ * @param username - The user username [opt]
  *
  * @return uac: UserActivationCode
  *
  */
-export const post_user_register = ( req: ILRequest, email: string, password: string, recaptcha: string, name?: string, lastname?: string, cback: LCback = null ): Promise<UserActivationCode> => {
+export const post_user_register = ( req: ILRequest, email: string, password: string, recaptcha: string, name?: string, lastname?: string, phone?: string, username?: string, cback: LCback = null ): Promise<UserActivationCode> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_register ===*/
 		const domain = '__system__';
 		const err = { message: _( "Invalid domain '{{ domain }}'", { domain } ) };
 		const sd: SystemDomain = await system_domain_get_by_code( domain );
+
 		if ( !sd ) return cback ? cback( err ) : reject( err );
 
 		const rc = await _recaptcha_check( req, recaptcha, err );
 		if ( !rc ) return cback ? cback( err ) : reject( err );
 
+		if ( !username ) username = email.split( "@" )[ 0 ].replaceAll( ".", "_" );
+
+		if ( await check_email( req, email ) ) {
+			err.message = _( 'Email already registered' );
+			return cback ? cback( err ) : reject( err );
+		}
+
+		if ( await check_username( req, username ) ) {
+			err.message = _( 'Username already registered' );
+			return cback ? cback( err ) : reject( err );
+		}
+
 		err.message = _( 'Invalid parameters' );
 
 		let code = unique_code();
-		const dct = { email, password: sha512( password ), name, lastname, enabled: false, visible: false, code, id_domain: sd.id, id: mkid( 'user' ) };
+		const dct = {
+			id: mkid( 'user' ),
+			phone,
+			username,
+			email,
+			password: sha512( password ),
+			name,
+			lastname,
+			enabled: false,
+			visible: false,
+			code,
+			id_domain: sd.id,
+		};
 
 		if ( !isValidEmail( email ) ) return cback ? cback( err ) : reject( err );
 
@@ -1369,6 +1405,33 @@ export const post_user_anonymous = ( req: ILRequest, ts: string, challenge: stri
 };
 // }}}
 
+// {{{ post_user_register_app ( req: ILRequest, email: string, password: string, challenge: string, name?: string, lastname?: string, phone?: string, username?: string, cback: LCBack = null ): Promise<UserActivationCode>
+/**
+ *
+ * Start the registration process of the user replacing the rechapta with a challenge code.
+ * The call creates an entry inside the database (if no error is encountered)
+ * If in **debug mode** this functyion returns  the `UserActivationCode`
+ *
+ * @param email - the new user email [req]
+ * @param password - the user password [req]
+ * @param challenge - The challenge code [req]
+ * @param name - the user first name [opt]
+ * @param lastname - the user lastname [opt]
+ * @param phone - the user phone [opt]
+ * @param username - The user username [opt]
+ *
+ * @return uac: UserActivationCode
+ *
+ */
+export const post_user_register_app = ( req: ILRequest, email: string, password: string, challenge: string, name?: string, lastname?: string, phone?: string, username?: string, cback: LCback = null ): Promise<UserActivationCode> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== f2c_start post_user_register_app ===*/
+
+		/*=== f2c_end post_user_register_app ===*/
+	} );
+};
+// }}}
+
 // {{{ user_facerec_get ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<UserFaceRec[]>
 /**
  *
@@ -1506,18 +1569,20 @@ export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boole
 	return new Promise( async ( resolve, reject ) => {
 		_liwe = liwe;
 
-		_coll_user_facerecs = await adb_collection_init( liwe.db, COLL_USER_FACERECS, [
+		await adb_collection_init( liwe.db, COLL_USER_FACERECS, [
 			{ type: "persistent", fields: [ "id" ], unique: true },
 			{ type: "persistent", fields: [ "domain" ], unique: false },
 			{ type: "persistent", fields: [ "id_user" ], unique: false },
 			{ type: "persistent", fields: [ "id_upload" ], unique: true },
 		], { drop: false } );
 
-		_coll_users = await adb_collection_init( liwe.db, COLL_USERS, [
+		await adb_collection_init( liwe.db, COLL_USERS, [
 			{ type: "persistent", fields: [ "id" ], unique: true },
 			{ type: "persistent", fields: [ "domain" ], unique: false },
 			{ type: "persistent", fields: [ "email" ], unique: true },
+			{ type: "persistent", fields: [ "username" ], unique: true },
 			{ type: "persistent", fields: [ "enabled" ], unique: false },
+			{ type: "persistent", fields: [ "phone" ], unique: false },
 			{ type: "persistent", fields: [ "tags[*]" ], unique: false },
 			{ type: "persistent", fields: [ "id_upload" ], unique: false },
 			{ type: "persistent", fields: [ "deleted" ], unique: false },
