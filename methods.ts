@@ -36,16 +36,16 @@ import { Address } from '../address/types';
 import { perm_available } from '../../liwe/auth';
 import { adb_collection_init, adb_del_one, adb_find_all, adb_find_one, adb_prepare_filters, adb_query_all, adb_query_one, adb_record_add } from '../../liwe/db/arango';
 
-export const check_username = async ( req: ILRequest, username: string ): Promise<boolean> => {
+export const username_exists = async ( req: ILRequest, username: string ): Promise<boolean> => {
 	const user: User = await adb_find_one( req.db, COLL_USERS, { username } );
 
-	return user ? false : true;
+	return user ? true : false;
 };
 
-export const check_email = async ( req: ILRequest, email: string ): Promise<boolean> => {
+export const email_exists = async ( req: ILRequest, email: string ): Promise<boolean> => {
 	const user: User = await adb_find_one( req.db, COLL_USERS, { email } );
 
-	return user ? false : true;
+	return user ? true : false;
 };
 
 export const user_get = async ( id?: string, email?: string, wallet?: string, facerec?: boolean, username?: string, phone?: string ): Promise<User> => {
@@ -390,12 +390,12 @@ export const post_user_register = ( req: ILRequest, email: string, password: str
 
 		if ( !username ) username = email.split( "@" )[ 0 ].replaceAll( ".", "_" );
 
-		if ( await check_email( req, email ) ) {
+		if ( await email_exists( req, email ) ) {
 			err.message = _( 'Email already registered' );
 			return cback ? cback( err ) : reject( err );
 		}
 
-		if ( await check_username( req, username ) ) {
+		if ( await username_exists( req, username ) ) {
 			err.message = _( 'Username already registered' );
 			return cback ? cback( err ) : reject( err );
 		}
