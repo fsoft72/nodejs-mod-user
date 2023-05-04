@@ -234,7 +234,7 @@
 			"url": "/api/user/login",
 			"params": {
 				"email": "admin@gmail.com",
-				"password": "Ciao123!",
+				"password": "UserAdmin1!",
 				"recaptcha": "ciao"
 			},
 			"fields": [
