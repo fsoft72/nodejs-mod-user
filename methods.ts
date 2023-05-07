@@ -203,6 +203,66 @@ const _create_user_session = async ( req: ILRequest, user: User ) => {
 
 	return resp;
 };
+
+const _create_user = async ( req: ILRequest, err: ILError, username: string, email: string, phone: string, name: string, lastname: string, password: string, enabled = false, visible = false ) => {
+	const domain = '__system__';
+	const sd: SystemDomain = await system_domain_get_by_code( domain );
+
+	if ( !sd ) {
+		err.message = _( 'System domain not found' );
+		return null;
+	}
+
+	if ( !username ) username = email.split( "@" )[ 0 ].replaceAll( ".", "_" );
+
+	if ( await email_exists( req, email ) ) {
+		err.message = _( 'Email already registered' );
+		return null;
+	}
+
+	if ( await username_exists( req, username ) ) {
+		err.message = _( 'Username already registered' );
+		return null;
+	}
+
+	err.message = _( 'Invalid parameters' );
+
+	let code = unique_code();
+	const dct = {
+		id: mkid( 'user' ),
+		phone,
+		username,
+		email,
+		password: sha512( password ),
+		name,
+		lastname,
+		enabled,
+		visible,
+		code,
+		id_domain: sd.id,
+	};
+
+	if ( !isValidEmail( email ) ) {
+		err.message = _( 'Invalid email' );
+		return null;
+	}
+
+	let u = await user_get( undefined, email );
+	if ( u ) {
+		add_suspicious_activity( req, req.res, 'Using same email for registration' );
+		error( "user %s already exists", email );
+		return null;
+	}
+
+	if ( !_valid_password( password, err, req.cfg ) ) {
+		error( "password for user %s not valid: %s", email, password );
+		return null;
+	}
+
+	await adb_record_add( req.db, COLL_USERS, dct );
+
+	return dct;
+};
 /*=== f2c_end __file_header ===*/
 
 // {{{ post_user_admin_add ( req: ILRequest, email: string, password: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, cback: LCBack = null ): Promise<User>
@@ -380,61 +440,25 @@ export const patch_user_admin_fields = ( req: ILRequest, id: string, data: any, 
 export const post_user_register = ( req: ILRequest, email: string, password: string, recaptcha: string, name?: string, lastname?: string, phone?: string, username?: string, cback: LCback = null ): Promise<UserActivationCode> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_register ===*/
-		const domain = '__system__';
-		const err = { message: _( "Invalid domain '{{ domain }}'", { domain } ) };
-		const sd: SystemDomain = await system_domain_get_by_code( domain );
-
-		if ( !sd ) return cback ? cback( err ) : reject( err );
+		const err = { message: _( 'Invalid parameters' ) };
 
 		const rc = await _recaptcha_check( req, recaptcha, err );
 		if ( !rc ) return cback ? cback( err ) : reject( err );
 
-		if ( !username ) username = email.split( "@" )[ 0 ].replaceAll( ".", "_" );
-
-		if ( await email_exists( req, email ) ) {
-			err.message = _( 'Email already registered' );
-			return cback ? cback( err ) : reject( err );
-		}
-
-		if ( await username_exists( req, username ) ) {
-			err.message = _( 'Username already registered' );
-			return cback ? cback( err ) : reject( err );
-		}
-
-		err.message = _( 'Invalid parameters' );
-
-		let code = unique_code();
-		const dct = {
-			id: mkid( 'user' ),
-			phone,
+		const user: User = await _create_user(
+			req,
+			err,
 			username,
 			email,
-			password: sha512( password ),
+			phone,
 			name,
 			lastname,
-			enabled: false,
-			visible: false,
-			code,
-			id_domain: sd.id,
-		};
+			password,
+		);
 
-		if ( !isValidEmail( email ) ) return cback ? cback( err ) : reject( err );
+		if ( !user ) return cback ? cback( err ) : reject( err );
 
-		let u = await user_get( undefined, email );
-		if ( u ) {
-			add_suspicious_activity( req, req.res, 'Using same email for registration' );
-			console.error( "ERROR: user %s already exists", email );
-			return cback ? cback( err ) : reject( err );
-		}
-
-		if ( !_valid_password( password, err, req.cfg ) ) {
-			console.error( "ERROR: password for user %s not valid: %s", email, password );
-			return cback ? cback( err ) : reject( err );
-		}
-
-		await adb_record_add( req.db, COLL_USERS, dct );
-
-		return cback ? cback( null, code as any ) : resolve( code as any );
+		return cback ? cback( null, user.code as any ) : resolve( user.code as any );
 		/*=== f2c_end post_user_register ===*/
 	} );
 };
@@ -1436,9 +1460,23 @@ export const post_user_register_app = ( req: ILRequest, email: string, password:
 			return cback ? cback( err ) : reject( err );
 		}
 
+		const user: User = await _create_user(
+			req,
+			err,
+			username,
+			email,
+			phone,
+			name,
+			lastname,
+			password,
+			true,
+			true );
 
+		if ( !user ) return cback ? cback( err ) : reject( err );
 
+		keys_filter( user, UserKeys );
 
+		return cback ? cback( null, user ) : resolve( user );
 		/*=== f2c_end post_user_register_app ===*/
 	} );
 };
