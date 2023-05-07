@@ -1,6 +1,6 @@
 
 import { ILRequest, ILResponse, LCback, ILiweConfig, ILError, ILiWE } from '../../liwe/types';
-import { mkid } from '../../liwe/utils';
+import { challenge_create, mkid } from '../../liwe/utils';
 import { DocumentCollection } from 'arangojs/collection';
 import { $l } from '../../liwe/locale';
 
@@ -35,6 +35,7 @@ import { address_add, address_user_list } from '../address/methods';
 import { Address } from '../address/types';
 import { perm_available } from '../../liwe/auth';
 import { adb_collection_init, adb_del_one, adb_find_all, adb_find_one, adb_prepare_filters, adb_query_all, adb_query_one, adb_record_add } from '../../liwe/db/arango';
+import { error } from '../../liwe/console_colors';
 
 export const username_exists = async ( req: ILRequest, username: string ): Promise<boolean> => {
 	const user: User = await adb_find_one( req.db, COLL_USERS, { username } );
@@ -1426,6 +1427,17 @@ export const post_user_anonymous = ( req: ILRequest, ts: string, challenge: stri
 export const post_user_register_app = ( req: ILRequest, email: string, password: string, challenge: string, name?: string, lastname?: string, phone?: string, username?: string, cback: LCback = null ): Promise<UserActivationCode> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_register_app ===*/
+		const challenge_fields = [ email, password, name, lastname, phone, username ];
+		const check_challenge = challenge_create( challenge_fields );
+		const err = { message: _( 'Invalid challenge' ) };
+
+		if ( check_challenge != challenge ) {
+			error( 'Invalid challenge', { received: challenge, expected: check_challenge } );
+			return cback ? cback( err ) : reject( err );
+		}
+
+
+
 
 		/*=== f2c_end post_user_register_app ===*/
 	} );
