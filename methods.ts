@@ -227,7 +227,7 @@ const _create_user = async ( req: ILRequest, err: ILError, username: string, ema
 
 	err.message = _( 'Invalid parameters' );
 
-	let code = unique_code();
+	let code = unique_code( true, null, false ).slice( 0, 6 ).toUpperCase();
 	const dct = {
 		id: mkid( 'user' ),
 		phone,
@@ -1468,12 +1468,11 @@ export const post_user_register_app = ( req: ILRequest, email: string, password:
 			phone,
 			name,
 			lastname,
-			password,
-			true,
-			true );
+			password );
 
 		if ( !user ) return cback ? cback( err ) : reject( err );
 
+		console.log( "\n\n==== CODE: ", user.code );
 		keys_filter( user, UserKeys );
 
 		return cback ? cback( null, user ) : resolve( user );
