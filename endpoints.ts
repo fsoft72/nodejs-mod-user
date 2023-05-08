@@ -250,15 +250,17 @@ export const init = ( liwe: ILiWE ) => {
 	} );
 
 	app.post ( '/api/user/login', ( req: ILRequest, res: ILResponse ) => {
-		const { email, password, recaptcha, ___errors } = typed_dict( req.body, [
-			{ name: "email", type: "string", required: true },
+		const { password, email, username, recaptcha, challenge, ___errors } = typed_dict( req.body, [
 			{ name: "password", type: "string", required: true },
-			{ name: "recaptcha", type: "string", required: true }
+			{ name: "email", type: "string" },
+			{ name: "username", type: "string" },
+			{ name: "recaptcha", type: "string" },
+			{ name: "challenge", type: "string" }
 		] );
 
 		if ( ___errors.length ) return send_error ( res, { message: `Parameters error: ${___errors.join ( ', ' )}` } );
 
-		post_user_login ( req, email, password, recaptcha, ( err: ILError, __plain__: UserSessionData ) => {
+		post_user_login ( req, password, email, username, recaptcha, challenge, ( err: ILError, __plain__: UserSessionData ) => {
 			if ( err ) return send_error( res, err );
 
 			send_ok( res, { ...__plain__ } );

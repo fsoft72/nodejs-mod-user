@@ -1,7 +1,5 @@
 
 import { ILRequest, ILResponse, LCback, ILiweConfig, ILError, ILiWE } from '../../liwe/types';
-import { challenge_create, mkid } from '../../liwe/utils';
-import { DocumentCollection } from 'arangojs/collection';
 import { $l } from '../../liwe/locale';
 
 import {
@@ -20,7 +18,7 @@ const COLL_USER_FACERECS = "user_facerecs";
 const COLL_USERS = "users";
 
 /*=== f2c_start __file_header === */
-import { challenge_check, isValidEmail, jwt_crypt, jwt_decrypt, keys_filter, keys_valid, random_string, recaptcha_check, set_attr, sha512, unique_code } from '../../liwe/utils';
+import { mkid, challenge_check, challenge_create, isValidEmail, jwt_crypt, jwt_decrypt, keys_filter, keys_valid, random_string, recaptcha_check, set_attr, sha512, unique_code } from '../../liwe/utils';
 import { tag_obj } from '../tag/methods';
 import { add_suspicious_activity } from '../../liwe/defender';
 import { send_mail_template } from '../../liwe/mail';
@@ -729,24 +727,41 @@ export const post_user_token = ( req: ILRequest, username: string, password: str
 };
 // }}}
 
-// {{{ post_user_login ( req: ILRequest, email: string, password: string, recaptcha: string, cback: LCBack = null ): Promise<UserSessionData>
+// {{{ post_user_login ( req: ILRequest, password: string, email?: string, username?: string, recaptcha?: string, challenge?: string, cback: LCBack = null ): Promise<UserSessionData>
 /**
  *
- * This endpoint implements the user authentication with ``login`` and ``password``.
+ * This endpoint implements the user authentication with ``email`` or ``username`` and ``password`` field.
+ * The call must provide also ``recaptcha`` or ``challenge`` in order to verify the validity of the call. \
+ * You don't have to provide both, but one is mandatory.
  * If the user is known, a JWT token with the running session is returned to the system.
  *
- * @param email - The user email [req]
  * @param password - the user password [req]
- * @param recaptcha - The recaptcha check code [req]
+ * @param email - The user email [opt]
+ * @param username - The username [opt]
+ * @param recaptcha - The recaptcha check code [opt]
+ * @param challenge - The challenge verification code [opt]
  *
  * @return __plain__: UserSessionData
  *
  */
-export const post_user_login = ( req: ILRequest, email: string, password: string, recaptcha: string, cback: LCback = null ): Promise<UserSessionData> => {
+export const post_user_login = ( req: ILRequest, password: string, email?: string, username?: string, recaptcha?: string, challenge?: string, cback: LCback = null ): Promise<UserSessionData> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_login ===*/
+		const err = { message: '' };
+
+		if ( !username && !email ) {
+			add_suspicious_activity( req, req.res, 'Username and email not provided' );
+			err.message = _( 'Username or email not provided' );
+			return cback ? cback( err ) : reject( err );
+		}
+
+		if ( !recaptcha && !challenge ) {
+			add_suspicious_activity( req, req.res, 'Recaptcha or challenge not provided' );
+			err.message = _( 'Recaptcha or challenge not provided' );
+			return cback ? cback( err ) : reject( err );
+		}
+
 		const user: User = await user_get( undefined, email );
-		const err = { message: _( 'Invalid login or password' ) };
 
 		const rc = await _recaptcha_check( req, recaptcha, err );
 		if ( !rc ) return cback ? cback( err ) : reject( err );
