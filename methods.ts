@@ -1467,7 +1467,7 @@ export const post_user_register_app = ( req: ILRequest, email: string, password:
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_register_app ===*/
 		const challenge_fields = [ email, password, name, lastname, phone, username ];
-		const check_challenge = challenge_create( challenge_fields );
+		const check_challenge = challenge_create( challenge_fields, true );
 		const err = { message: _( 'Invalid challenge' ) };
 
 		if ( check_challenge != challenge ) {
