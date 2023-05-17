@@ -1496,6 +1496,36 @@ export const post_user_register_app = ( req: ILRequest, email: string, password:
 };
 // }}}
 
+// {{{ get_user_find ( req: ILRequest, search?: string, cback: LCBack = null ): Promise<UserDetails>
+/**
+ *
+ * This endpoints allows the search of a user in the system.
+ * You can search only for one these fields at a time:
+ * - `email`
+ * - `username`
+ * and both these fields are considered complete strings and not partials.
+ * The `search` parameter will search in both fields at the same time.
+ *
+ * @param search - The user email [opt]
+ *
+ * @return user: UserDetails
+ *
+ */
+export const get_user_find = ( req: ILRequest, search?: string, cback: LCback = null ): Promise<UserDetails> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== f2c_start get_user_find ===*/
+		const user: UserDetails = await adb_query_one( req.db, `
+		FOR u IN users
+			FILTER u.email == @search OR u.username == @search
+			RETURN u
+		`, { search }, UserDetailsKeys );
+
+		return cback ? cback( null, user ) : resolve( user );
+		/*=== f2c_end get_user_find ===*/
+	} );
+};
+// }}}
+
 // {{{ user_facerec_get ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<UserFaceRec[]>
 /**
  *

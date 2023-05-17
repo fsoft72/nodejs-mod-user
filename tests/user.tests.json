@@ -194,6 +194,21 @@
 			]
 		},
 		{
+			"title": "Find the Mario user by email",
+			"method": "get",
+			"url": "/api/user/find",
+			"auth": true,
+			"params": {
+				"search": "mario.rossi.test@gmail.com"
+			},
+			"tests": [
+				{
+					"field": "user.name",
+					"value": "Mario"
+				}
+			]
+		},
+		{
 			"title": "Login as Mario",
 			"method": "post",
 			"url": "/api/user/login",

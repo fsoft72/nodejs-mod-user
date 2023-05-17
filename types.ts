@@ -196,6 +196,7 @@ export const UserPermsKeys = {
 export interface UserDetails {
 	/** the main id field */
 	id?: string;
+	username?: string;
 	/** User name */
 	name?: string;
 	/** User lastname */
@@ -208,6 +209,7 @@ export interface UserDetails {
 
 export const UserDetailsKeys = {
 	'id': { type: 'string', priv: false },
+	'username': { type: 'string', priv: false },
 	'name': { type: 'string', priv: false },
 	'lastname': { type: 'string', priv: false },
 	'email': { type: 'string', priv: false },
