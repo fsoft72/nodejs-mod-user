@@ -1,0 +1,18 @@
+{
+	"system": {
+		"base_url": "http://localhost:8901",
+		"authorization_template": "Bearer %(token)s"
+	},
+	"actions": [
+		{
+			"method": "POST",
+			"url": "/api/user/register",
+			"auth": false,
+			"params": {
+				"email": "fabio.rotondo@gmail.com",
+				"password": "Ciao123!",
+				"recaptcha": "test"
+			}
+		}
+	]
+}

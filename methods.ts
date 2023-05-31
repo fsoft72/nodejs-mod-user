@@ -261,6 +261,18 @@ const _create_user = async ( req: ILRequest, err: ILError, username: string, ema
 
 	return dct;
 };
+
+const _send_validation_code = ( req: ILRequest, user: User ) => {
+	send_mail_template( _( `Activation code: ${ user.code }` ), server_fullpath( "../../etc/templates/user/activation-code.html" ),
+		{
+			code: user.code,
+			name: user.name,
+			lastname: user.lastname,
+			username: user.username,
+			site_name: req.cfg.app.name,
+			site_base_url: req.cfg.server.public_url,
+		}, user.email, req.cfg.smtp.from, null, null );
+};
 /*=== f2c_end __file_header ===*/
 
 // {{{ post_user_admin_add ( req: ILRequest, email: string, password: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, cback: LCBack = null ): Promise<User>
@@ -456,7 +468,12 @@ export const post_user_register = ( req: ILRequest, email: string, password: str
 
 		if ( !user ) return cback ? cback( err ) : reject( err );
 
-		return cback ? cback( null, user.code as any ) : resolve( user.code as any );
+		_send_validation_code( req, user );
+
+		// if cfg.debug is true, return the activation code
+		const code = req.cfg.debug?.enabled && req.cfg.debug?.send_code ? user.code : '';
+
+		return cback ? cback( null, code as any ) : resolve( code as any );
 		/*=== f2c_end post_user_register ===*/
 	} );
 };
@@ -1486,6 +1503,8 @@ export const post_user_register_app = ( req: ILRequest, email: string, password:
 			password );
 
 		if ( !user ) return cback ? cback( err ) : reject( err );
+
+		_send_validation_code( req, user );
 
 		console.log( "\n\n==== CODE: ", user.code );
 		keys_filter( user, UserKeys );
