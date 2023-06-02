@@ -18,7 +18,7 @@ const COLL_USER_FACERECS = "user_facerecs";
 const COLL_USERS = "users";
 
 /*=== f2c_start __file_header === */
-import { mkid, challenge_check, challenge_create, isValidEmail, jwt_crypt, jwt_decrypt, keys_filter, keys_valid, random_string, recaptcha_check, set_attr, sha512, unique_code } from '../../liwe/utils';
+import { mkid, challenge_check, challenge_create, isValidEmail, jwt_crypt, jwt_decrypt, keys_filter, keys_valid, random_string, recaptcha_check, set_attr, sha512, unique_code, unique_code_numbers } from '../../liwe/utils';
 import { tag_obj } from '../tag/methods';
 import { add_suspicious_activity } from '../../liwe/defender';
 import { send_mail_template } from '../../liwe/mail';
@@ -225,7 +225,6 @@ const _create_user = async ( req: ILRequest, err: ILError, username: string, ema
 
 	err.message = _( 'Invalid parameters' );
 
-	let code = unique_code( true, null, false ).slice( 0, 6 ).toUpperCase();
 	const dct = {
 		id: mkid( 'user' ),
 		phone,
@@ -236,9 +235,10 @@ const _create_user = async ( req: ILRequest, err: ILError, username: string, ema
 		lastname,
 		enabled,
 		visible,
-		code,
 		id_domain: sd.id,
 	};
+
+	_user_code( req, dct );
 
 	if ( !isValidEmail( email ) ) {
 		err.message = _( 'Invalid email' );
@@ -260,6 +260,19 @@ const _create_user = async ( req: ILRequest, err: ILError, username: string, ema
 	await adb_record_add( req.db, COLL_USERS, dct );
 
 	return dct;
+};
+
+const _user_code = ( req: ILRequest, user: User ) => {
+	let code = '';
+
+	if ( req.cfg.user.auth_code_numbers )
+		code = unique_code_numbers( req.cfg.user.auth_code_length );
+	else
+		code = unique_code( true, null, false ).slice( 0, req.cfg.user.auth_code_length ).toUpperCase();
+
+	user.code = code;
+
+	return user;
 };
 /*=== f2c_end __file_header ===*/
 
@@ -577,7 +590,7 @@ export const post_user_password_forgot = ( req: ILRequest, email: string, recapt
 			return cback ? cback( err ) : reject( err );
 		}
 
-		user.code = random_string( 30, 30, false );
+		_user_code( req, user );
 
 		user = await adb_record_add( req.db, COLL_USERS, user );
 
@@ -626,6 +639,8 @@ export const post_user_password_reset = ( req: ILRequest, email: string, code: s
 		}
 
 		user.password = sha512( password );
+		// we overwrite the code with a new random one
+		user.code = mkid( 'code' );
 
 		await adb_record_add( _liwe.db, COLL_USERS, user );
 
@@ -1522,6 +1537,58 @@ export const get_user_find = ( req: ILRequest, search?: string, cback: LCback = 
 
 		return cback ? cback( null, user ) : resolve( user );
 		/*=== f2c_end get_user_find ===*/
+	} );
+};
+// }}}
+
+// {{{ post_user_password_forgot_app ( req: ILRequest, username: string, challenge: string, cback: LCBack = null ): Promise<UserActivationCode>
+/**
+ *
+ * Start the 'Password forgotten' process for the user in App Mode, where the reCaptcha cannot be used.
+ * This password-forgot takes the `username` that will be checked against both `username` and `email` fields.
+ * The call creates a temporary token for the user that is emailed to the user.
+ * In **debug mode**  returns to the user the activation code as  ``str`` inside ``uac``.
+ *
+ * @param username - the username of the user [req]
+ * @param challenge - the challenge code [req]
+ *
+ * @return uac: UserActivationCode
+ *
+ */
+export const post_user_password_forgot_app = ( req: ILRequest, username: string, challenge: string, cback: LCback = null ): Promise<UserActivationCode> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== f2c_start post_user_password_forgot_app ===*/
+		const challenge_fields = [ username ];
+		const check_challenge = challenge_create( challenge_fields, true );
+		const err = { message: _( 'Invalid challenge' ) };
+
+		if ( check_challenge != challenge ) {
+			error( 'Invalid challenge', { received: challenge, expected: check_challenge } );
+			return cback ? cback( err ) : reject( err );
+		}
+
+		// first we check if the user exists using username as email
+		let user: User = await user_get( null, username );
+
+		// if user == null, we try to get the user using the username
+		user = await user_get( null, null, null, false, username );
+
+		if ( !user ) {
+			err.message = _( 'User not found' );
+			return cback ? cback( err ) : reject( err );
+		}
+
+		// if we are here, the user exists and we can create the token
+		_user_code( req, user );
+
+		await adb_record_add( req.db, COLL_USERS, user );
+
+		console.log( "=== OTP: ", user.code );
+
+		const uac: UserActivationCode = { code: user.code, email: user.email };
+
+		return cback ? cback( null, uac ) : resolve( uac );
+		/*=== f2c_end post_user_password_forgot_app ===*/
 	} );
 };
 // }}}

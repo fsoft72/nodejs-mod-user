@@ -27,10 +27,13 @@ export const UserRegistrationKeys = {
 export interface UserActivationCode {
 	/** Temporary code to complete action */
 	code?: string;
+	/** The user email */
+	email?: string;
 }
 
 export const UserActivationCodeKeys = {
 	'code': { type: 'string', priv: false },
+	'email': { type: 'string', priv: false },
 };
 
 /** UserFaceRec */
