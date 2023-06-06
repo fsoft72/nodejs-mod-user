@@ -798,6 +798,7 @@ export const post_user_login = ( req: ILRequest, password: string, email?: strin
 		if ( !user ) user = await user_get( undefined, undefined, undefined, undefined, username || email );
 
 		if ( !user ) {
+			err.message = _( 'User not found' );
 			console.error( "User not found: ", email, password );
 			add_suspicious_activity( req, req.res, `User not found ${ email }` );
 			return cback ? cback( err ) : reject( err );
