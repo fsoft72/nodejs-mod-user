@@ -793,16 +793,18 @@ export const post_user_login = ( req: ILRequest, password: string, email?: strin
 			return cback ? cback( err ) : reject( err );
 		}
 
-		const user: User = await user_get( undefined, email );
+		let user: User = await user_get( undefined, email );
 
-		const rc = await _recaptcha_check( req, recaptcha, err );
-		if ( !rc ) return cback ? cback( err ) : reject( err );
+		if ( !user ) user = await user_get( undefined, undefined, undefined, undefined, username || email );
 
 		if ( !user ) {
 			console.error( "User not found: ", email, password );
 			add_suspicious_activity( req, req.res, `User not found ${ email }` );
 			return cback ? cback( err ) : reject( err );
 		}
+
+		const rc = await _recaptcha_check( req, recaptcha, err );
+		if ( !rc ) return cback ? cback( err ) : reject( err );
 
 		if ( user.enabled === false ) {
 			console.error( "User not enabled: ", email );
