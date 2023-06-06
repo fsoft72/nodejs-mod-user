@@ -118,6 +118,8 @@ export interface User {
 	faces?: UserFaceRec[];
 	/** The wallet ID */
 	wallet?: string;
+	/** The code of group the user belongs to */
+	group?: string;
 }
 
 export const UserKeys = {
@@ -149,6 +151,7 @@ export const UserKeys = {
 	'bio': { type: 'string', priv: false },
 	'faces': { type: 'UserFaceRec[]', priv: false },
 	'wallet': { type: 'string', priv: false },
+	'group': { type: 'string', priv: false },
 };
 
 /** UserSessionData */

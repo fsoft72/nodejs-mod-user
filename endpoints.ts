@@ -111,19 +111,20 @@ export const init = ( liwe: ILiWE ) => {
 	} );
 
 	app.post ( '/api/user/register', ( req: ILRequest, res: ILResponse ) => {
-		const { email, password, recaptcha, name, lastname, phone, username, ___errors } = typed_dict( req.body, [
+		const { email, password, recaptcha, name, lastname, phone, username, group, ___errors } = typed_dict( req.body, [
 			{ name: "email", type: "string", required: true },
 			{ name: "password", type: "string", required: true },
 			{ name: "recaptcha", type: "string", required: true },
 			{ name: "name", type: "string" },
 			{ name: "lastname", type: "string" },
 			{ name: "phone", type: "string" },
-			{ name: "username", type: "string" }
+			{ name: "username", type: "string" },
+			{ name: "group", type: "string" }
 		] );
 
 		if ( ___errors.length ) return send_error ( res, { message: `Parameters error: ${___errors.join ( ', ' )}` } );
 
-		post_user_register ( req, email, password, recaptcha, name, lastname, phone, username, ( err: ILError, uac: UserActivationCode ) => {
+		post_user_register ( req, email, password, recaptcha, name, lastname, phone, username, group, ( err: ILError, uac: UserActivationCode ) => {
 			if ( err ) return send_error( res, err );
 
 			send_ok( res, { uac } );
@@ -568,19 +569,20 @@ export const init = ( liwe: ILiWE ) => {
 	} );
 
 	app.post ( '/api/user/register/app', ( req: ILRequest, res: ILResponse ) => {
-		const { email, password, challenge, name, lastname, phone, username, ___errors } = typed_dict( req.body, [
+		const { email, password, challenge, name, lastname, phone, username, group, ___errors } = typed_dict( req.body, [
 			{ name: "email", type: "string", required: true },
 			{ name: "password", type: "string", required: true },
 			{ name: "challenge", type: "string", required: true },
 			{ name: "name", type: "string" },
 			{ name: "lastname", type: "string" },
 			{ name: "phone", type: "string" },
-			{ name: "username", type: "string" }
+			{ name: "username", type: "string" },
+			{ name: "group", type: "string" }
 		] );
 
 		if ( ___errors.length ) return send_error ( res, { message: `Parameters error: ${___errors.join ( ', ' )}` } );
 
-		post_user_register_app ( req, email, password, challenge, name, lastname, phone, username, ( err: ILError, uac: UserActivationCode ) => {
+		post_user_register_app ( req, email, password, challenge, name, lastname, phone, username, group, ( err: ILError, uac: UserActivationCode ) => {
 			if ( err ) return send_error( res, err );
 
 			send_ok( res, { uac } );

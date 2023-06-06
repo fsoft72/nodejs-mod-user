@@ -202,7 +202,20 @@ const _create_user_session = async ( req: ILRequest, user: User ) => {
 	return resp;
 };
 
-const _create_user = async ( req: ILRequest, err: ILError, username: string, email: string, phone: string, name: string, lastname: string, password: string, enabled = false, visible = false ) => {
+interface CreateUserData {
+	username?: string;
+	email?: string;
+	phone?: string;
+	name?: string;
+	lastname?: string;
+	password?: string;
+	enabled?: boolean;
+	visible?: boolean;
+	group?: string;
+}
+
+const _create_user = async ( req: ILRequest, err: ILError, params: CreateUserData ) => {
+	let { username, email, phone, name, lastname, password, group, enabled = false, visible = false } = params;
 	const domain = '__system__';
 	const sd: SystemDomain = await system_domain_get_by_code( domain );
 
@@ -235,6 +248,7 @@ const _create_user = async ( req: ILRequest, err: ILError, username: string, ema
 		lastname,
 		enabled,
 		visible,
+		group,
 		id_domain: sd.id,
 	};
 
@@ -442,7 +456,7 @@ export const patch_user_admin_fields = ( req: ILRequest, id: string, data: any, 
 };
 // }}}
 
-// {{{ post_user_register ( req: ILRequest, email: string, password: string, recaptcha: string, name?: string, lastname?: string, phone?: string, username?: string, cback: LCBack = null ): Promise<UserActivationCode>
+// {{{ post_user_register ( req: ILRequest, email: string, password: string, recaptcha: string, name?: string, lastname?: string, phone?: string, username?: string, group?: string, cback: LCBack = null ): Promise<UserActivationCode>
 /**
  *
  * Start the registration process of the user.
@@ -456,11 +470,12 @@ export const patch_user_admin_fields = ( req: ILRequest, id: string, data: any, 
  * @param lastname - the user lastname [opt]
  * @param phone - the user phone [opt]
  * @param username - The user username [opt]
+ * @param group - The user group [opt]
  *
  * @return uac: UserActivationCode
  *
  */
-export const post_user_register = ( req: ILRequest, email: string, password: string, recaptcha: string, name?: string, lastname?: string, phone?: string, username?: string, cback: LCback = null ): Promise<UserActivationCode> => {
+export const post_user_register = ( req: ILRequest, email: string, password: string, recaptcha: string, name?: string, lastname?: string, phone?: string, username?: string, group?: string, cback: LCback = null ): Promise<UserActivationCode> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_register ===*/
 		const err = { message: _( 'Invalid parameters' ) };
@@ -471,12 +486,15 @@ export const post_user_register = ( req: ILRequest, email: string, password: str
 		const user: User = await _create_user(
 			req,
 			err,
-			username,
-			email,
-			phone,
-			name,
-			lastname,
-			password,
+			{
+				username,
+				email,
+				phone,
+				name,
+				lastname,
+				password,
+				group,
+			}
 		);
 
 		if ( !user ) return cback ? cback( err ) : reject( err );
@@ -808,6 +826,7 @@ export const post_user_login = ( req: ILRequest, password: string, email?: strin
 		if ( !rc ) return cback ? cback( err ) : reject( err );
 
 		if ( user.enabled === false ) {
+			err.message = _( 'User not enabled' );
 			console.error( "User not enabled: ", email );
 			add_suspicious_activity( req, req.res, `User not enabled ${ email }` );
 			return cback ? cback( err ) : reject( err );
@@ -1480,7 +1499,7 @@ export const post_user_anonymous = ( req: ILRequest, ts: string, challenge: stri
 };
 // }}}
 
-// {{{ post_user_register_app ( req: ILRequest, email: string, password: string, challenge: string, name?: string, lastname?: string, phone?: string, username?: string, cback: LCBack = null ): Promise<UserActivationCode>
+// {{{ post_user_register_app ( req: ILRequest, email: string, password: string, challenge: string, name?: string, lastname?: string, phone?: string, username?: string, group?: string, cback: LCBack = null ): Promise<UserActivationCode>
 /**
  *
  * Start the registration process of the user replacing the rechapta with a challenge code.
@@ -1494,14 +1513,15 @@ export const post_user_anonymous = ( req: ILRequest, ts: string, challenge: stri
  * @param lastname - the user lastname [opt]
  * @param phone - the user phone [opt]
  * @param username - The user username [opt]
+ * @param group - The user group [opt]
  *
  * @return uac: UserActivationCode
  *
  */
-export const post_user_register_app = ( req: ILRequest, email: string, password: string, challenge: string, name?: string, lastname?: string, phone?: string, username?: string, cback: LCback = null ): Promise<UserActivationCode> => {
+export const post_user_register_app = ( req: ILRequest, email: string, password: string, challenge: string, name?: string, lastname?: string, phone?: string, username?: string, group?: string, cback: LCback = null ): Promise<UserActivationCode> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_register_app ===*/
-		const challenge_fields = [ email, password, name, lastname, phone, username ];
+		const challenge_fields = [ email, password, name, lastname, phone, username, group ];
 		const check_challenge = challenge_create( challenge_fields, true );
 		const err = { message: _( 'Invalid challenge' ) };
 
@@ -1513,12 +1533,16 @@ export const post_user_register_app = ( req: ILRequest, email: string, password:
 		const user: User = await _create_user(
 			req,
 			err,
-			username,
-			email,
-			phone,
-			name,
-			lastname,
-			password );
+			{
+				username,
+				email,
+				phone,
+				name,
+				lastname,
+				password,
+				group,
+			}
+		);
 
 		if ( !user ) return cback ? cback( err ) : reject( err );
 
@@ -1769,6 +1793,7 @@ export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boole
 			{ type: "persistent", fields: [ "tags[*]" ], unique: false },
 			{ type: "persistent", fields: [ "id_upload" ], unique: false },
 			{ type: "persistent", fields: [ "deleted" ], unique: false },
+			{ type: "persistent", fields: [ "group" ], unique: false },
 		], { drop: false } );
 
 		/*=== f2c_start user_db_init ===*/
