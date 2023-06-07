@@ -1639,6 +1639,66 @@ export const post_user_password_forgot_app = ( req: ILRequest, username: string,
 };
 // }}}
 
+// {{{ post_user_del_app ( req: ILRequest, id_user: string, username: string, challenge: string, cback: LCBack = null ): Promise<boolean>
+/**
+ *
+ * Deletes a user from the app, providing a challenge.
+ * The user can only remove him/her self.
+ *
+ * @param id_user - The user id to be deleted [req]
+ * @param username - The username [req]
+ * @param challenge - The request challenge [req]
+ *
+ * @return ok: boolean
+ *
+ */
+export const post_user_del_app = ( req: ILRequest, id_user: string, username: string, challenge: string, cback: LCback = null ): Promise<boolean> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== f2c_start post_user_del_app ===*/
+		const challenge_fields = [ id_user, username ];
+		const check_challenge = challenge_create( challenge_fields, true );
+		const err = { message: _( 'Invalid challenge' ) };
+
+		if ( check_challenge != challenge ) {
+			add_suspicious_activity( req, req.res, `Tried to delete a user with wrong challenge: OK ${ check_challenge } / Provided ${ challenge }` );
+			return cback ? cback( err ) : reject( err );
+		}
+
+		const user: User = await user_get( id_user );
+
+		if ( !user ) {
+			err.message = _( 'User not found' );
+			return cback ? cback( err ) : reject( err );
+		}
+
+		if ( user.id != req.user.id ) {
+			err.message = _( 'You cannot delete another user' );
+			add_suspicious_activity( req, req.res, `Tried to delete another user: ${ user.id }` );
+			return cback ? cback( err ) : reject( err );
+		}
+
+		if ( user.username != username ) {
+			err.message = _( 'Invalid username' );
+			add_suspicious_activity( req, req.res, `Tried to delete a user with wrong username: OK ${ user.username } / Provided ${ username }` );
+			return cback ? cback( err ) : reject( err );
+		}
+
+		await get_user_logout( req );
+
+		// if we get here, we anonymize the user username and email
+		user.username = `${ user.id }_${ user.username }`;
+		user.email = `${ user.id }_${ user.email }`;
+		user.enabled = false;
+		user.deleted = new Date();
+
+		await adb_record_add( req.db, COLL_USERS, user );
+
+		return cback ? cback( null, true ) : resolve( true );
+		/*=== f2c_end post_user_del_app ===*/
+	} );
+};
+// }}}
+
 // {{{ user_facerec_get ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<UserFaceRec[]>
 /**
  *
