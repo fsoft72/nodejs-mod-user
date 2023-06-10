@@ -417,6 +417,7 @@ export const delete_user_admin_del = ( req: ILRequest, id_user: string, cback: L
 		const d = new Date().toISOString().split( "T" )[ 0 ];
 
 		u.email = `${ u.email }-${ d }`;
+		u.username = `${ u.username }-${ d }`;
 		u.enabled = false;
 		u.deleted = new Date();
 
