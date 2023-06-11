@@ -179,6 +179,7 @@ const _password_check = ( req: ILRequest, password: string, user: User, err: any
 
 	if ( user.password != sha512( password ) ) {
 		console.error( "Wrong password for user: ", email, password );
+		err.message = _( "Wrong username or password" );
 		add_suspicious_activity( req, req.res, `Wrong password ${ email }` );
 		return false;
 	}
