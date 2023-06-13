@@ -1523,7 +1523,7 @@ export const post_user_anonymous = ( req: ILRequest, ts: string, challenge: stri
 export const post_user_register_app = ( req: ILRequest, email: string, password: string, challenge: string, name?: string, lastname?: string, phone?: string, username?: string, group?: string, cback: LCback = null ): Promise<UserActivationCode> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_register_app ===*/
-		const challenge_fields = [ email, password, name, lastname, phone, username, group ];
+		const challenge_fields = [ email, password, name, lastname, username, group ];  // FIXME: add phone
 		const check_challenge = challenge_create( challenge_fields, true );
 		const err = { message: _( 'Invalid challenge' ) };
 
