@@ -132,16 +132,19 @@ export const init = ( liwe: ILiWE ) => {
 	} );
 
 	app.patch ( '/api/user/update', perms( [ "is-logged" ] ), ( req: ILRequest, res: ILResponse ) => {
-		const { email, password, name, lastname, ___errors } = typed_dict( req.body, [
+		const { email, password, name, lastname, username, group, phone, ___errors } = typed_dict( req.body, [
 			{ name: "email", type: "string" },
 			{ name: "password", type: "string" },
 			{ name: "name", type: "string" },
-			{ name: "lastname", type: "string" }
+			{ name: "lastname", type: "string" },
+			{ name: "username", type: "string" },
+			{ name: "group", type: "string" },
+			{ name: "phone", type: "string" }
 		] );
 
 		if ( ___errors.length ) return send_error ( res, { message: `Parameters error: ${___errors.join ( ', ' )}` } );
 
-		patch_user_update ( req, email, password, name, lastname, ( err: ILError, user: User ) => {
+		patch_user_update ( req, email, password, name, lastname, username, group, phone, ( err: ILError, user: User ) => {
 			if ( err ) return send_error( res, err );
 
 			send_ok( res, { user } );

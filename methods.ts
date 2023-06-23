@@ -512,31 +512,56 @@ export const post_user_register = ( req: ILRequest, email: string, password: str
 };
 // }}}
 
-// {{{ patch_user_update ( req: ILRequest, email?: string, password?: string, name?: string, lastname?: string, cback: LCBack = null ): Promise<User>
+// {{{ patch_user_update ( req: ILRequest, email?: string, password?: string, name?: string, lastname?: string, username?: string, group?: string, phone?: string, cback: LCBack = null ): Promise<User>
 /**
  *
  * Updates user data.
+ * You can specify one or more of the required fields.
+ * Some fields, such as `email` and `username` are checked for uniqueness.
  * Only the user can update him/her self.
  *
  * @param email - the new user email [opt]
  * @param password - the user password [opt]
  * @param name - the user name [opt]
  * @param lastname - the user lastname [opt]
+ * @param username - the username [opt]
+ * @param group - The user group [opt]
+ * @param phone - The user phone number [opt]
  *
  * @return user: User
  *
  */
-export const patch_user_update = ( req: ILRequest, email?: string, password?: string, name?: string, lastname?: string, cback: LCback = null ): Promise<User> => {
+export const patch_user_update = ( req: ILRequest, email?: string, password?: string, name?: string, lastname?: string, username?: string, group?: string, phone?: string, cback: LCback = null ): Promise<User> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start patch_user_update ===*/
 		let u = await user_get( req.user.id );
+		const err = { message: _( 'User not found' ) };
 
 		if ( !u ) {
-			const err = { message: _( 'User not found' ) };
 			return cback ? cback( err ) : reject( err );
 		}
 
-		u = { ...u, ...keys_valid( { email, password, name, lastname } ) };
+		// if email is provided, check if it is unique
+		if ( email ) {
+			const u2: User = await user_get( undefined, email );
+			if ( u2 && u2.id !== u.id ) {
+				err.message = _( 'Email already in use' );
+				return cback ? cback( err ) : reject( err );
+			}
+		}
+
+		// if username is provided, check if it is unique
+		if ( username ) {
+			const u3: User = await user_get( undefined, undefined, undefined, undefined, username );
+			if ( u3 && u3.id !== u.id ) {
+				err.message = _( 'Username already in use' );
+				return cback ? cback( err ) : reject( err );
+			}
+		}
+
+		// if we get here, all unique fields are ok
+
+		u = { ...u, ...keys_valid( { email, password, name, lastname, username, group, phone } ) };
 
 		u = await adb_record_add( req.db, COLL_USERS, u, UserKeys );
 
