@@ -118,7 +118,7 @@ export interface User {
 	faces?: UserFaceRec[];
 	/** The wallet ID */
 	wallet?: string;
-	/** The code of group the user belongs to */
+	/** The user group */
 	group?: string;
 }
 
