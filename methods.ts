@@ -301,6 +301,18 @@ const _send_validation_code = ( req: ILRequest, user: User ) => {
 			site_base_url: req.cfg.server.public_url,
 		}, user.email, req.cfg.smtp.from, null, null );
 };
+
+const _send_password_reset = ( req: ILRequest, user: User ) => {
+	send_mail_template( _( `Password Reset code: ${ user.code }` ), server_fullpath( "../../etc/templates/user/password-reset.html" ),
+		{
+			code: user.code,
+			name: user.name,
+			lastname: user.lastname,
+			username: user.username,
+			site_name: req.cfg.app.name,
+			site_base_url: req.cfg.server.public_url,
+		}, user.email, req.cfg.smtp.from, null, null );
+};
 /*=== f2c_end __file_header ===*/
 
 // {{{ post_user_admin_add ( req: ILRequest, email: string, password: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, cback: LCBack = null ): Promise<User>
@@ -1659,6 +1671,8 @@ export const post_user_password_forgot_app = ( req: ILRequest, username: string,
 		console.log( "=== OTP: ", user.code );
 
 		const uac: UserActivationCode = { code: user.code, email: user.email };
+
+		_send_validation_code( req, user );
 
 		return cback ? cback( null, uac ) : resolve( uac );
 		/*=== f2c_end post_user_password_forgot_app ===*/
