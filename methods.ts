@@ -48,6 +48,9 @@ export const email_exists = async ( req: ILRequest, email: string ): Promise<boo
 };
 
 export const user_get = async ( id?: string, email?: string, wallet?: string, facerec?: boolean, username?: string, phone?: string ): Promise<User> => {
+	if ( email ) email = email.trim().toLowerCase();
+	if ( username ) username = username.trim().toLowerCase();
+
 	const user: User = await adb_find_one( _liwe.db, COLL_USERS, { id, email, wallet, username, phone } );
 
 	if ( !user ) return null;
@@ -1655,8 +1658,10 @@ export const post_user_password_forgot_app = ( req: ILRequest, username: string,
 		// first we check if the user exists using username as email
 		let user: User = await user_get( null, username );
 
-		// if user == null, we try to get the user using the username
-		user = await user_get( null, null, null, false, username );
+		if ( user == null ) {
+			// if user == null, we try to get the user using the username
+			user = await user_get( null, null, null, false, username );
+		}
 
 		if ( !user ) {
 			err.message = _( 'User not found' );
