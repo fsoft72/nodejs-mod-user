@@ -228,7 +228,7 @@ const _create_user = async ( req: ILRequest, err: ILError, params: CreateUserDat
 		return null;
 	}
 
-	if ( !username ) username = email.split( "@" )[ 0 ].replaceAll( ".", "_" );
+	if ( !username ) username = email.split( "@" )[ 0 ].replace( /\./g, '_' );
 
 	if ( await email_exists( req, email ) ) {
 		err.message = _( 'Email already registered' );
@@ -883,6 +883,9 @@ export const post_user_login = ( req: ILRequest, password: string, email?: strin
 			token_type: 'bearer',
 			name: user.name,
 			lastname: user.lastname,
+			id_user: user.id,
+			email: user.email,
+			perms: user.perms,
 		};
 
 		return cback ? cback( null, resp ) : resolve( resp );

@@ -172,6 +172,7 @@ export interface UserSessionData {
 	perms?: any;
 	/** The user email */
 	email?: string;
+	id_user?: string;
 }
 
 export const UserSessionDataKeys = {
@@ -183,6 +184,7 @@ export const UserSessionDataKeys = {
 	'token_type': { type: 'string', priv: false },
 	'perms': { type: 'any', priv: false },
 	'email': { type: 'string', priv: false },
+	'id_user': { type: 'string', priv: false },
 };
 
 /** UserPerms */
