@@ -3,7 +3,6 @@
 /*=== f2c_start __file ===*/
 import { Address } from '../address/types';
 /*=== f2c_end __file ===*/
-
 /** UserRegistration */
 export interface UserRegistration {
 	/** The user email */
