@@ -1,0 +1,229 @@
+{
+	"system": {
+		"base_url": "http://localhost:12000",
+		"authorization_template": "Bearer %(token)s"
+	},
+	"actions": [
+		{
+			"method": "post",
+			"url": "/api/user/register",
+			"auth": false,
+			"title": "Registering a new user",
+			"params": {
+				"email": "mario.rossi.test@gmail.com",
+				"password": "Ciao123!",
+				"name": "Mario",
+				"lastname": "Rossi TEST",
+				"recaptcha": "test"
+			},
+			"tests": [
+				{
+					"field": "uac",
+					"mode": "SIZE-GT",
+					"value": 0
+				}
+			],
+			"fields": [
+				[
+					"uac",
+					"code"
+				]
+			]
+		},
+		{
+			"method": "get",
+			"url": "/api/user/register/activate/%(code)s",
+			"auth": false,
+			"tests": [
+				{
+					"field": "user.name",
+					"mode": "EQUAL",
+					"value": "Mario"
+				}
+			]
+		},
+		{
+			"method": "post",
+			"url": "/api/user/token",
+			"content": "form",
+			"auth": false,
+			"params": {
+				"username": "mario.rossi.test@gmail.com",
+				"password": "Ciao123!"
+			},
+			"tests": [
+				{
+					"field": "access_token",
+					"mode": "SIZE-GT",
+					"value": 0
+				},
+				{
+					"field": "token_type",
+					"mode": "EQUAL",
+					"value": "bearer"
+				}
+			],
+			"fields": [
+				[
+					"access_token",
+					"token"
+				]
+			]
+		},
+		{
+			"method": "get",
+			"url": "/api/user/me",
+			"tests": [
+				{
+					"field": "user.name",
+					"mode": "EQUAL",
+					"value": "Mario"
+				}
+			],
+			"fields": [
+				[
+					"user.id",
+					"mario_id_user"
+				]
+			]
+		},
+		{
+			"method": "post",
+			"url": "/api/user/login",
+			"params": {
+				"email": "admin@gmail.com",
+				"password": "UserAdmin1!",
+				"recaptcha": "ciao"
+			},
+			"fields": [
+				[
+					"access_token",
+					"token"
+				]
+			]
+		},
+		{
+			"method": "get",
+			"url": "/api/user/me",
+			"auth": true,
+			"tests": [
+				{
+					"field": "user.name",
+					"mode": "EQUAL",
+					"value": "Johnny"
+				}
+			],
+			"fields": [
+				[
+					"user.id",
+					"admin_id_user"
+				]
+			]
+		},
+		{
+			"method": "post",
+			"url": "/api/user/perms_set",
+			"auth": true,
+			"params": {
+				"id_user": "%(mario_id_user)s",
+				"perms": {
+					"system": [
+						"admin"
+					]
+				}
+			}
+		},
+		{
+			"method": "get",
+			"url": "/api/system/admin/permissions/list",
+			"auth": true,
+			"tests": [
+				{
+					"field": "permissions.system",
+					"mode": "EXIST"
+				},
+				{
+					"field": "permissions.user",
+					"mode": "EXIST"
+				}
+			]
+		},
+		{
+			"method": "post",
+			"url": "/api/user/login",
+			"params": {
+				"email": "admin@gmail.com",
+				"password": "UserAdmin1!",
+				"recaptcha": "ciao"
+			},
+			"fields": [
+				[
+					"access_token",
+					"token"
+				]
+			]
+		},
+		{
+			"method": "POST",
+			"url": "/api/user/perms_set",
+			"auth": true,
+			"params": {
+				"id_user": "%(mario_id_user)s",
+				"perms": {
+					"system": [],
+					"user": [
+						"user.create"
+					]
+				}
+			}
+		},
+		{
+			"method": "post",
+			"url": "/api/user/login",
+			"params": {
+				"email": "mario.rossi.test@gmail.com",
+				"password": "Ciao123!",
+				"recaptcha": "ciao"
+			},
+			"fields": [
+				[
+					"access_token",
+					"token"
+				]
+			]
+		},
+		{
+			"method": "get",
+			"url": "/api/system/admin/permissions/list",
+			"auth": true,
+			"tests": [
+				{
+					"field": "permissions.user",
+					"mode": "EXIST"
+				}
+			]
+		},
+		{
+			"method": "post",
+			"url": "/api/user/login",
+			"params": {
+				"email": "admin@gmail.com",
+				"password": "UserAdmin1!",
+				"recaptcha": "ciao"
+			},
+			"fields": [
+				[
+					"access_token",
+					"token"
+				]
+			]
+		},
+		{
+			"method": "delete",
+			"url": "/api/user/admin/del",
+			"params": {
+				"id_user": "%(mario_id_user)s"
+			}
+		}
+	]
+}
