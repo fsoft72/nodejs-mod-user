@@ -472,6 +472,9 @@ export const patch_user_admin_fields = ( req: ILRequest, id: string, data: any, 
 
 		if ( !u ) return cback ? cback( err ) : reject( err );
 
+		// perms cannot be changed using this function
+		delete data.perms;
+
 		u = await adb_record_add( req.db, COLL_USERS, { ...u, ...data }, UserKeys );
 
 		return cback ? cback( null, u ) : resolve( u );
@@ -1064,7 +1067,20 @@ export const post_user_perms_set = ( req: ILRequest, id_user: string, perms: Use
 
 		if ( !user ) return cback ? cback( err ) : reject( err );
 
-		user.perms = perms as any;
+		// filter the incoming perms, so that perms values do not contain the module name
+		const res: Record<string, string[]> = {};
+		for ( const [ mod, p ] of Object.entries( perms ) ) {
+			res[ mod ] = [];
+			p.forEach( ( v: string ) => {
+				const vals = v.split( '.' );
+
+				if ( vals.length === 1 ) return res[ mod ].push( v );
+
+				return res[ mod ].push( vals[ 1 ] );
+			} );
+		}
+
+		user.perms = res;  // perms as any;
 		await adb_record_add( req.db, COLL_USERS, user );
 
 		return cback ? cback( null, true ) : resolve( true );
@@ -1892,7 +1908,7 @@ export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boole
 	return new Promise( async ( resolve, reject ) => {
 		_liwe = liwe;
 
-		system_permissions_register( 'user', _module_perms);
+		system_permissions_register( 'user', _module_perms );
 
 		await adb_collection_init( liwe.db, COLL_USER_FACERECS, [
 			{ type: "persistent", fields: [ "id" ], unique: true },
