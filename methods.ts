@@ -475,6 +475,26 @@ export const patch_user_admin_fields = ( req: ILRequest, id: string, data: any, 
 		// perms cannot be changed using this function
 		delete data.perms;
 
+		// if data contains email, check if it is unique
+		if ( data.email ) {
+			const u2: User = await user_get( undefined, data.email );
+
+			if ( u2 && u2.id !== u.id ) {
+				err.message = _( 'Email already in use' );
+				return cback ? cback( err ) : reject( err );
+			}
+		}
+
+		// if data contains username, check if it is unique
+		if ( data.username ) {
+			const u3: User = await user_get( undefined, undefined, undefined, undefined, data.username );
+
+			if ( u3 && u3.id !== u.id ) {
+				err.message = _( 'Username already in use' );
+				return cback ? cback( err ) : reject( err );
+			}
+		}
+
 		u = await adb_record_add( req.db, COLL_USERS, { ...u, ...data }, UserKeys );
 
 		return cback ? cback( null, u ) : resolve( u );
