@@ -119,6 +119,10 @@ export interface User {
 	wallet?: string;
 	/** The user group */
 	group?: string;
+	/** 2FA Secret code */
+	twofactor?: string;
+	/** Flag T/F to know if 2FA is enabled */
+	twofactor_enabled?: boolean;
 }
 
 export const UserKeys = {
@@ -151,6 +155,8 @@ export const UserKeys = {
 	'faces': { type: 'UserFaceRec[]', priv: false },
 	'wallet': { type: 'string', priv: false },
 	'group': { type: 'string', priv: false },
+	'twofactor': { type: 'string', priv: true },
+	'twofactor_enabled': { type: 'boolean', priv: true },
 };
 
 /** UserSessionData */

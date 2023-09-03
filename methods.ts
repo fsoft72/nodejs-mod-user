@@ -42,6 +42,8 @@ import { perm_available } from '../../liwe/auth';
 import { adb_collection_init, adb_del_one, adb_find_all, adb_find_one, adb_prepare_filters, adb_query_all, adb_query_one, adb_record_add } from '../../liwe/db/arango';
 import { error } from '../../liwe/console_colors';
 
+const twofactor = require( "node-2fa" );
+
 export const username_exists = async ( req: ILRequest, username: string ): Promise<boolean> => {
 	const user: User = await adb_find_one( req.db, COLL_USERS, { username } );
 
@@ -197,8 +199,33 @@ const _password_check = ( req: ILRequest, password: string, user: User, err: any
 	return true;
 };
 
-const _create_user_session = async ( req: ILRequest, user: User ) => {
-	const tok: any = await user_session_create( req, user );
+const _create_user_session = async ( req: ILRequest, user: User, twoFACode = '', err: any ) => {
+	// if err is NOT provided, we'll skip all 2FA checks
+	if ( err ) {
+		err.message = '';
+		if ( user.twofactor && user.twofactor_enabled && !twoFACode ) {
+			// the user has 2FA enabled, but no code was provided
+			// we send an empty session
+			return {
+				id: user.id
+			};
+		}
+
+		if ( user.twofactor && user.twofactor_enabled && twoFACode ) {
+			// the user has 2FA and a code was provided
+			// we check the code
+			const res = twofactor.verifyToken( user.twofactor, twoFACode );
+
+			if ( !res || res.delta < 0 || res.delta > 2 ) {
+				// the code is wrong
+				err.message = _( 'Invalid 2FA code' );
+				return null;
+			}
+		}
+	}
+
+	// If we get here, we can create the session
+	const tok: string = await user_session_create( req, user );
 
 	const resp: UserSessionData = {
 		access_token: tok,
@@ -887,6 +914,7 @@ export const post_user_login = ( req: ILRequest, password: string, email?: strin
 
 		if ( !user ) user = await user_get( undefined, undefined, undefined, undefined, username || email );
 
+
 		if ( !user ) {
 			err.message = _( 'User not found' );
 			console.error( "User not found: ", email, password );
@@ -896,6 +924,7 @@ export const post_user_login = ( req: ILRequest, password: string, email?: strin
 
 		const rc = await _recaptcha_check( req, recaptcha, err );
 		if ( !rc ) return cback ? cback( err ) : reject( err );
+
 
 		if ( user.enabled === false ) {
 			err.message = _( 'User not enabled' );
@@ -907,16 +936,9 @@ export const post_user_login = ( req: ILRequest, password: string, email?: strin
 		if ( !_password_check( req, password, user, err, email ) )
 			return cback ? cback( err ) : reject( err );
 
-		const tok: any = await user_session_create( req, user );
-		const resp: UserSessionData = {
-			access_token: tok,
-			token_type: 'bearer',
-			name: user.name,
-			lastname: user.lastname,
-			id_user: user.id,
-			email: user.email,
-			perms: user.perms,
-		};
+
+		const resp: UserSessionData = await _create_user_session( req, user, '', err );
+		if ( err.message ) return cback ? cback( err ) : reject( err );
 
 		return cback ? cback( null, resp ) : resolve( resp );
 		/*=== f2c_end post_user_login ===*/
@@ -945,8 +967,6 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
 		/*=== f2c_start post_user_login_remote ===*/
 		const err = { message: _( 'Invalid data for user remote login' ) };
 
-		console.log( "\n\n\n==== post_user_login_remote: ", { email, name, challenge, avatar } );
-
 		// Check if the challenge is valid
 		if ( !challenge_check( challenge, [ email, name, avatar ] ) )
 			return cback ? cback( err ) : reject( err );
@@ -971,7 +991,7 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
 		}
 
 		// If the user exists we create a valid session and return
-		const resp: UserSessionData = await _create_user_session( req, user );
+		const resp: UserSessionData = await _create_user_session( req, user, '', null );
 		return cback ? cback( null, resp ) : resolve( resp );
 		/*=== f2c_end post_user_login_remote ===*/
 	} );
@@ -1378,7 +1398,7 @@ export const post_user_login_metamask = ( req: ILRequest, address: string, chall
 		}
 
 		// If the user exists we create a valid session and return
-		const resp: UserSessionData = await _create_user_session( req, user );
+		const resp: UserSessionData = await _create_user_session( req, user, '', null );
 		return cback ? cback( null, resp ) : resolve( resp );
 		/*=== f2c_end post_user_login_metamask ===*/
 	} );
@@ -1791,6 +1811,121 @@ export const post_user_del_app = ( req: ILRequest, id_user: string, username: st
 };
 // }}}
 
+// {{{ get_user_2fa_start ( req: ILRequest, cback: LCBack = null ): Promise<string>
+/**
+ *
+ * This endpoint starts a new 2FA authentication process for the user.
+ * It generates an internal key and stores it inside the `2fa` field of the user
+ *
+ *
+ * @return url: string
+ *
+ */
+export const get_user_2fa_start = ( req: ILRequest, cback: LCback = null ): Promise<string> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== f2c_start get_user_2fa_start ===*/
+		const err = { message: _( 'User not found' ) };
+		const user: User = await user_get( req.user.id );
+
+		if ( !user ) return cback ? cback( err ) : reject( err );
+
+		if ( user.twofactor && user.twofactor_enabled ) {
+			err.message = _( '2FA already enabled' );
+			return cback ? cback( err ) : reject( err );
+		}
+
+		const newSecret = twofactor.generateSecret( { name: req.cfg.app.name } );
+
+		// We save the secret inside the user
+		user.twofactor = newSecret.secret;
+
+		// TODO: add backup codes
+
+		await adb_record_add( req.db, COLL_USERS, user );
+
+		// We return the QR Code URL
+		const url = newSecret.qr;
+
+		return cback ? cback( null, url ) : resolve( url );
+		/*=== f2c_end get_user_2fa_start ===*/
+	} );
+};
+// }}}
+
+// {{{ post_user_login_2fa ( req: ILRequest, id: string, code: string, cback: LCBack = null ): Promise<UserSessionData>
+/**
+ *
+ * Completes the login process by providing the 2FA challenge value
+ *
+ * @param id - The user id [req]
+ * @param code - The challenge code [req]
+ *
+ * @return __plain__: UserSessionData
+ *
+ */
+export const post_user_login_2fa = ( req: ILRequest, id: string, code: string, cback: LCback = null ): Promise<UserSessionData> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== f2c_start post_user_login_2fa ===*/
+		const user: User = await user_get( id );
+		const err = { message: _( 'User not found' ) };
+
+		if ( !user ) return cback ? cback( err ) : reject( err );
+
+		const resp: UserSessionData = await _create_user_session( req, user, code, err );
+		if ( err.message ) return cback ? cback( err ) : reject( err );
+
+		return cback ? cback( null, resp ) : resolve( resp );
+		/*=== f2c_end post_user_login_2fa ===*/
+	} );
+};
+// }}}
+
+// {{{ post_user_2fa_verify ( req: ILRequest, code: string, cback: LCBack = null ): Promise<boolean>
+/**
+ *
+ * Used to verify the 2FA activation for a new user.
+ * The user must be logged in to use this call.
+ *
+ * @param code - The 2FA verification code [req]
+ *
+ * @return ok: boolean
+ *
+ */
+export const post_user_2fa_verify = ( req: ILRequest, code: string, cback: LCback = null ): Promise<boolean> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== f2c_start post_user_2fa_verify ===*/
+		const err = { message: _( 'User not found' ) };
+		const user: User = await user_get( req.user.id );
+
+		if ( !user ) return cback ? cback( err ) : reject( err );
+
+		if ( !user.twofactor ) {
+			err.message = _( '2FA not enabled' );
+			return cback ? cback( err ) : reject( err );
+		}
+
+		if ( user.twofactor && user.twofactor_enabled ) {
+			err.message = _( '2FA already enabled' );
+			return cback ? cback( err ) : reject( err );
+		}
+
+		const valid = twofactor.verifyToken( user.twofactor, code );
+
+		if ( !valid || valid.delta < 0 || valid.delta > 1 ) {
+			err.message = _( 'Invalid code' );
+			return cback ? cback( err ) : reject( err );
+		}
+
+		user.twofactor_enabled = true;
+
+		await adb_record_add( req.db, COLL_USERS, user );
+
+		return cback ? cback( null, true ) : resolve( true );
+		/*=== f2c_end post_user_2fa_verify ===*/
+	} );
+};
+// }}}
+
 // {{{ user_facerec_get ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<UserFaceRec[]>
 /**
  *
@@ -1892,7 +2027,7 @@ export const user_session_create = ( req: ILRequest, user: User, cback: LCback =
 
 		// We save the sess_id inside the token, not the session_key, because the key is
 		// calculated by `session_id()` call
-		const tok = jwt_crypt( sess_id, _liwe.cfg.security.secret, _liwe.cfg.security.token_expires );
+		const tok = jwt_crypt( sess_id, req.cfg.security.secret, req.cfg.security.token_expires );
 
 		const data = {
 			user: {
