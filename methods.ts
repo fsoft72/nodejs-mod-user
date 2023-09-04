@@ -204,8 +204,6 @@ const _password_check = ( req: ILRequest, password: string, user: User, err: any
 const _get_user_2fa = async ( req: ILRequest, user: User ) => {
 	let user2FA: User2FA = await adb_find_one( req.db, COLL_USER_2FAS, { id_user: user.id } );
 
-	console.log( "=== GET user2FA: ", user2FA, user.id );
-
 	if ( !user2FA ) {
 		user2FA = {
 			id_user: user.id,
@@ -239,7 +237,7 @@ const _create_user_session = async ( req: ILRequest, user: User, twoFANounce = '
 		if ( user2FA.twofactor && user2FA.enabled && twoFACode ) {
 			// check the nounce
 			if ( user2FA.nonce != twoFANounce ) {
-				err.message = _( 'Invalid 2FA nounce' );
+				console.log( "ERR: invalid 2FA nounce: ", user2FA.nonce, twoFANounce );
 
 				// if the nounce is wrong, we reset it
 				user2FA.nonce = mkid( 'nonce' );
@@ -252,10 +250,14 @@ const _create_user_session = async ( req: ILRequest, user: User, twoFANounce = '
 			// we check the code
 			const res = twofactor.verifyToken( user2FA.twofactor, twoFACode );
 
+			console.log( "=== VERIFY: ", res, user2FA.twofactor, twoFACode );
+
 			if ( !res || res.delta < 0 || res.delta > 2 ) {
+				console.log( "ERR: invalid 2FA code" );
 				// the code is wrong
-				err.message = _( 'Invalid 2FA code' );
-				return null;
+				user2FA.nonce = mkid( 'nonce' );
+				await adb_record_add( req.db, COLL_USER_2FAS, user2FA );
+				return { id: user.id, nonce: user2FA.nonce };
 			}
 		}
 
@@ -1886,7 +1888,7 @@ export const get_user_2fa_start = ( req: ILRequest, cback: LCback = null ): Prom
 
 		// TODO: add backup codes
 
-		await adb_del_one( req.db, COLL_USER_2FAS, { id_user: user.id } );
+		// await adb_del_one( req.db, COLL_USER_2FAS, { id_user: user.id } );
 		await adb_record_add( req.db, COLL_USER_2FAS, user2FA );
 
 		// We return the QR Code URL
@@ -1919,7 +1921,7 @@ export const post_user_login_2fa = ( req: ILRequest, id: string, code: string, n
 		if ( !user ) return cback ? cback( err ) : reject( err );
 
 		const resp: UserSessionData = await _create_user_session( req, user, nonce, code, err );
-		if ( err.message ) return cback ? cback( err ) : reject( err );
+		// if ( err.message ) return cback ? cback( err ) : reject( err );
 
 		return cback ? cback( null, resp ) : resolve( resp );
 		/*=== f2c_end post_user_login_2fa ===*/
