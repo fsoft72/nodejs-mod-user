@@ -119,10 +119,6 @@ export interface User {
 	wallet?: string;
 	/** The user group */
 	group?: string;
-	/** 2FA Secret code */
-	twofactor?: string;
-	/** Flag T/F to know if 2FA is enabled */
-	twofactor_enabled?: boolean;
 }
 
 export const UserKeys = {
@@ -155,8 +151,6 @@ export const UserKeys = {
 	'faces': { type: 'UserFaceRec[]', priv: false },
 	'wallet': { type: 'string', priv: false },
 	'group': { type: 'string', priv: false },
-	'twofactor': { type: 'string', priv: true },
-	'twofactor_enabled': { type: 'boolean', priv: true },
 };
 
 /** UserSessionData */
@@ -178,6 +172,8 @@ export interface UserSessionData {
 	/** The user email */
 	email?: string;
 	id_user?: string;
+	/** The Nonce used for 2FA */
+	nonce?: string;
 }
 
 export const UserSessionDataKeys = {
@@ -190,6 +186,7 @@ export const UserSessionDataKeys = {
 	'perms': { type: 'any', priv: false },
 	'email': { type: 'string', priv: false },
 	'id_user': { type: 'string', priv: false },
+	'nonce': { type: 'string', priv: false },
 };
 
 /** UserPerms */
@@ -227,5 +224,24 @@ export const UserDetailsKeys = {
 	'lastname': { type: 'string', priv: false },
 	'email': { type: 'string', priv: false },
 	'avatar': { type: 'string', priv: false },
+};
+
+/** User2FA */
+export interface User2FA {
+	/** The ID User */
+	id_user?: string;
+	/** The 2FA code */
+	twofactor?: string;
+	/** If T, twofactor is enabled */
+	enabled?: boolean;
+	/** The nonce code */
+	nonce?: string;
+}
+
+export const User2FAKeys = {
+	'id_user': { type: 'string', priv: false },
+	'twofactor': { type: 'string', priv: false },
+	'enabled': { type: 'boolean', priv: false },
+	'nonce': { type: 'string', priv: false },
 };
 

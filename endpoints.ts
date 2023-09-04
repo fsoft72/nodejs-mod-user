@@ -25,9 +25,10 @@ import {
 } from './methods';
 
 import {
-	User, UserActivationCode, UserActivationCodeKeys, UserDetails, UserDetailsKeys,
-	UserFaceRec, UserFaceRecKeys, UserKeys, UserPerms, UserPermsKeys,
-	UserRegistration, UserRegistrationKeys, UserSessionData, UserSessionDataKeys,
+	User, User2FA, User2FAKeys, UserActivationCode, UserActivationCodeKeys,
+	UserDetails, UserDetailsKeys, UserFaceRec, UserFaceRecKeys, UserKeys,
+	UserPerms, UserPermsKeys, UserRegistration, UserRegistrationKeys, UserSessionData,
+	UserSessionDataKeys,
 } from './types';
 
 /*=== f2c_start __header ===*/
@@ -650,14 +651,15 @@ export const init = ( liwe: ILiWE ) => {
 	} );
 
 	app.post ( '/api/user/login/2fa', ( req: ILRequest, res: ILResponse ) => {
-		const { id, code, ___errors } = typed_dict( req.body, [
+		const { id, code, nonce, ___errors } = typed_dict( req.body, [
 			{ name: "id", type: "string", required: true },
-			{ name: "code", type: "string", required: true }
+			{ name: "code", type: "string", required: true },
+			{ name: "nonce", type: "string", required: true }
 		] );
 
 		if ( ___errors.length ) return send_error ( res, { message: `Parameters error: ${___errors.join ( ', ' )}` } );
 
-		post_user_login_2fa ( req, id, code, ( err: ILError, __plain__: UserSessionData ) => {
+		post_user_login_2fa ( req, id, code, nonce, ( err: ILError, __plain__: UserSessionData ) => {
 			if ( err ) return send_error( res, err );
 
 			send_ok( res, { ...__plain__ } );

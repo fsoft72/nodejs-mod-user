@@ -8,9 +8,10 @@ import { $l } from '../../liwe/locale';
 import { system_permissions_register } from '../system/methods';
 
 import {
-	User, UserActivationCode, UserActivationCodeKeys, UserDetails, UserDetailsKeys,
-	UserFaceRec, UserFaceRecKeys, UserKeys, UserPerms, UserPermsKeys,
-	UserRegistration, UserRegistrationKeys, UserSessionData, UserSessionDataKeys,
+	User, User2FA, User2FAKeys, UserActivationCode, UserActivationCodeKeys,
+	UserDetails, UserDetailsKeys, UserFaceRec, UserFaceRecKeys, UserKeys,
+	UserPerms, UserPermsKeys, UserRegistration, UserRegistrationKeys, UserSessionData,
+	UserSessionDataKeys,
 } from './types';
 
 import _module_perms from './perms';
@@ -23,6 +24,7 @@ const _ = ( txt: string, vals: any = null, plural = false ) => {
 
 const COLL_USER_FACERECS = "user_facerecs";
 const COLL_USERS = "users";
+const COLL_USER_2FAS = "user_2fas";
 
 /*=== f2c_start __file_header === */
 import { mkid, challenge_check, challenge_create, isValidEmail, jwt_crypt, jwt_decrypt, keys_filter, keys_valid, random_string, recaptcha_check, set_attr, sha512, unique_code, unique_code_numbers } from '../../liwe/utils';
@@ -199,22 +201,56 @@ const _password_check = ( req: ILRequest, password: string, user: User, err: any
 	return true;
 };
 
-const _create_user_session = async ( req: ILRequest, user: User, twoFACode = '', err: any ) => {
+const _get_user_2fa = async ( req: ILRequest, user: User ) => {
+	let user2FA: User2FA = await adb_find_one( req.db, COLL_USER_2FAS, { id_user: user.id } );
+
+	console.log( "=== GET user2FA: ", user2FA, user.id );
+
+	if ( !user2FA ) {
+		user2FA = {
+			id_user: user.id,
+			twofactor: null,
+			enabled: false
+		};
+	}
+
+	return user2FA;
+};
+
+const _create_user_session = async ( req: ILRequest, user: User, twoFANounce = '', twoFACode = '', err: any ) => {
 	// if err is NOT provided, we'll skip all 2FA checks
 	if ( err ) {
+		const user2FA: User2FA = await _get_user_2fa( req, user );
+
 		err.message = '';
-		if ( user.twofactor && user.twofactor_enabled && !twoFACode ) {
+		if ( user2FA.twofactor && user2FA.enabled && !twoFACode ) {
 			// the user has 2FA enabled, but no code was provided
-			// we send an empty session
+			// we create a new nounce and return it
+
+			user2FA.nonce = mkid( 'nonce' );
+			await adb_record_add( req.db, COLL_USER_2FAS, user2FA );
+
 			return {
-				id: user.id
+				id: user.id,
+				nonce: user2FA.nonce,
 			};
 		}
 
-		if ( user.twofactor && user.twofactor_enabled && twoFACode ) {
+		if ( user2FA.twofactor && user2FA.enabled && twoFACode ) {
+			// check the nounce
+			if ( user2FA.nonce != twoFANounce ) {
+				err.message = _( 'Invalid 2FA nounce' );
+
+				// if the nounce is wrong, we reset it
+				user2FA.nonce = mkid( 'nonce' );
+				await adb_record_add( req.db, COLL_USER_2FAS, user2FA );
+
+				return { id: user.id, nonce: user2FA.nonce };
+			}
+
 			// the user has 2FA and a code was provided
 			// we check the code
-			const res = twofactor.verifyToken( user.twofactor, twoFACode );
+			const res = twofactor.verifyToken( user2FA.twofactor, twoFACode );
 
 			if ( !res || res.delta < 0 || res.delta > 2 ) {
 				// the code is wrong
@@ -222,6 +258,11 @@ const _create_user_session = async ( req: ILRequest, user: User, twoFACode = '',
 				return null;
 			}
 		}
+
+		// if we get here, the user has 2FA enabled and the code is correct
+		// we reset the nounce
+		user2FA.nonce = mkid( 'tmp' );
+		await adb_record_add( req.db, COLL_USER_2FAS, user2FA );
 	}
 
 	// If we get here, we can create the session
@@ -235,6 +276,7 @@ const _create_user_session = async ( req: ILRequest, user: User, twoFACode = '',
 		lastname: user.lastname,
 		id: user.id,
 		perms: user.perms,
+		nonce: null,
 	};
 
 	return resp;
@@ -937,7 +979,7 @@ export const post_user_login = ( req: ILRequest, password: string, email?: strin
 			return cback ? cback( err ) : reject( err );
 
 
-		const resp: UserSessionData = await _create_user_session( req, user, '', err );
+		const resp: UserSessionData = await _create_user_session( req, user, '', '', err );
 		if ( err.message ) return cback ? cback( err ) : reject( err );
 
 		return cback ? cback( null, resp ) : resolve( resp );
@@ -991,7 +1033,7 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
 		}
 
 		// If the user exists we create a valid session and return
-		const resp: UserSessionData = await _create_user_session( req, user, '', null );
+		const resp: UserSessionData = await _create_user_session( req, user, '', '', null );
 		return cback ? cback( null, resp ) : resolve( resp );
 		/*=== f2c_end post_user_login_remote ===*/
 	} );
@@ -1398,7 +1440,7 @@ export const post_user_login_metamask = ( req: ILRequest, address: string, chall
 		}
 
 		// If the user exists we create a valid session and return
-		const resp: UserSessionData = await _create_user_session( req, user, '', null );
+		const resp: UserSessionData = await _create_user_session( req, user, '', '', null );
 		return cback ? cback( null, resp ) : resolve( resp );
 		/*=== f2c_end post_user_login_metamask ===*/
 	} );
@@ -1829,7 +1871,9 @@ export const get_user_2fa_start = ( req: ILRequest, cback: LCback = null ): Prom
 
 		if ( !user ) return cback ? cback( err ) : reject( err );
 
-		if ( user.twofactor && user.twofactor_enabled ) {
+		const user2FA: User2FA = await _get_user_2fa( req, user );
+
+		if ( user2FA.twofactor && user2FA.enabled ) {
 			err.message = _( '2FA already enabled' );
 			return cback ? cback( err ) : reject( err );
 		}
@@ -1837,11 +1881,13 @@ export const get_user_2fa_start = ( req: ILRequest, cback: LCback = null ): Prom
 		const newSecret = twofactor.generateSecret( { name: req.cfg.app.name } );
 
 		// We save the secret inside the user
-		user.twofactor = newSecret.secret;
+		user2FA.twofactor = newSecret.secret;
+		user2FA.enabled = false;
 
 		// TODO: add backup codes
 
-		await adb_record_add( req.db, COLL_USERS, user );
+		await adb_del_one( req.db, COLL_USER_2FAS, { id_user: user.id } );
+		await adb_record_add( req.db, COLL_USER_2FAS, user2FA );
 
 		// We return the QR Code URL
 		const url = newSecret.qr;
@@ -1852,18 +1898,19 @@ export const get_user_2fa_start = ( req: ILRequest, cback: LCback = null ): Prom
 };
 // }}}
 
-// {{{ post_user_login_2fa ( req: ILRequest, id: string, code: string, cback: LCBack = null ): Promise<UserSessionData>
+// {{{ post_user_login_2fa ( req: ILRequest, id: string, code: string, nonce: string, cback: LCBack = null ): Promise<UserSessionData>
 /**
  *
  * Completes the login process by providing the 2FA challenge value
  *
  * @param id - The user id [req]
- * @param code - The challenge code [req]
+ * @param code - The 2FA code [req]
+ * @param nonce - The nonce code [req]
  *
  * @return __plain__: UserSessionData
  *
  */
-export const post_user_login_2fa = ( req: ILRequest, id: string, code: string, cback: LCback = null ): Promise<UserSessionData> => {
+export const post_user_login_2fa = ( req: ILRequest, id: string, code: string, nonce: string, cback: LCback = null ): Promise<UserSessionData> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_login_2fa ===*/
 		const user: User = await user_get( id );
@@ -1871,7 +1918,7 @@ export const post_user_login_2fa = ( req: ILRequest, id: string, code: string, c
 
 		if ( !user ) return cback ? cback( err ) : reject( err );
 
-		const resp: UserSessionData = await _create_user_session( req, user, code, err );
+		const resp: UserSessionData = await _create_user_session( req, user, nonce, code, err );
 		if ( err.message ) return cback ? cback( err ) : reject( err );
 
 		return cback ? cback( null, resp ) : resolve( resp );
@@ -1899,26 +1946,30 @@ export const post_user_2fa_verify = ( req: ILRequest, code: string, cback: LCbac
 
 		if ( !user ) return cback ? cback( err ) : reject( err );
 
-		if ( !user.twofactor ) {
+		const user2FA: User2FA = await _get_user_2fa( req, user );
+
+		console.log( "=== user2FA: ", user2FA );
+
+		if ( !user2FA.twofactor ) {
 			err.message = _( '2FA not enabled' );
 			return cback ? cback( err ) : reject( err );
 		}
 
-		if ( user.twofactor && user.twofactor_enabled ) {
+		if ( user2FA.twofactor && user2FA.enabled ) {
 			err.message = _( '2FA already enabled' );
 			return cback ? cback( err ) : reject( err );
 		}
 
-		const valid = twofactor.verifyToken( user.twofactor, code );
+		const valid = twofactor.verifyToken( user2FA.twofactor, code );
 
 		if ( !valid || valid.delta < 0 || valid.delta > 1 ) {
 			err.message = _( 'Invalid code' );
 			return cback ? cback( err ) : reject( err );
 		}
 
-		user.twofactor_enabled = true;
+		user2FA.enabled = true;
 
-		await adb_record_add( req.db, COLL_USERS, user );
+		await adb_record_add( req.db, COLL_USER_2FAS, user2FA );
 
 		return cback ? cback( null, true ) : resolve( true );
 		/*=== f2c_end post_user_2fa_verify ===*/
@@ -2083,6 +2134,11 @@ export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boole
 			{ type: "persistent", fields: [ "id_upload" ], unique: false },
 			{ type: "persistent", fields: [ "deleted" ], unique: false },
 			{ type: "persistent", fields: [ "group" ], unique: false },
+		], { drop: false } );
+
+		await adb_collection_init( liwe.db, COLL_USER_2FAS, [
+			{ type: "persistent", fields: [ "id_user" ], unique: true },
+			{ type: "persistent", fields: [ "nonce" ], unique: false },
 		], { drop: false } );
 
 		/*=== f2c_start user_db_init ===*/
