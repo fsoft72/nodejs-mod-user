@@ -396,13 +396,14 @@ const _send_password_reset = ( req: ILRequest, user: User ) => {
 };
 /*=== f2c_end __file_header ===*/
 
-// {{{ post_user_admin_add ( req: ILRequest, email: string, password: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, cback: LCBack = null ): Promise<User>
+// {{{ post_user_admin_add ( req: ILRequest, email: string, password: string, username: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, cback: LCBack = null ): Promise<User>
 /**
  *
  * This endpoint creates a valid user in the system, bypassing registration and verification phases.
  *
  * @param email - The user email [req]
  * @param password - The user password [req]
+ * @param username - The username [req]
  * @param name - The user first name [opt]
  * @param lastname - The user lastname [opt]
  * @param perms - User permissions [opt]
@@ -412,7 +413,7 @@ const _send_password_reset = ( req: ILRequest, user: User ) => {
  * @return user: User
  *
  */
-export const post_user_admin_add = ( req: ILRequest, email: string, password: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, cback: LCback = null ): Promise<User> => {
+export const post_user_admin_add = ( req: ILRequest, email: string, password: string, username: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, cback: LCback = null ): Promise<User> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_admin_add ===*/
 		email = email.toLowerCase();
@@ -424,7 +425,7 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
 		if ( !_valid_password( password, err, req.cfg ) )
 			return cback ? cback( err ) : reject( err );
 
-		u = { id: mkid( 'user' ), email, password: sha512( password ), name, lastname, enabled, language };
+		u = { id: mkid( 'user' ), email, password: sha512( password ), name, lastname, enabled, language, username };
 		u = await adb_record_add( req.db, COLL_USERS, u, UserKeys );
 
 		return cback ? cback( null, u ) : resolve( u );
