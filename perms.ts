@@ -9,6 +9,7 @@ const permissions = {
 	"user.tag": "Permission to modify user's tag",
 	"user.perms": "Permission to change user's perms",
 	"user.admin": "Permission to do everything on User",
+	"user.password": "Can change a user password",
 };
 
 export default permissions;

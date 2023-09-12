@@ -1980,6 +1980,35 @@ export const post_user_2fa_verify = ( req: ILRequest, code: string, cback: LCbac
 };
 // }}}
 
+// {{{ post_user_admin_change_password ( req: ILRequest, id_user: string, password: string, cback: LCBack = null ): Promise<boolean>
+/**
+ *
+ * This is an enpoint that can help admins to change user password when needed.
+ *
+ * @param id_user - The user id to change the password to [req]
+ * @param password - The new password [req]
+ *
+ * @return ok: boolean
+ *
+ */
+export const post_user_admin_change_password = ( req: ILRequest, id_user: string, password: string, cback: LCback = null ): Promise<boolean> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== f2c_start post_user_admin_change_password ===*/
+		const err = { message: _( 'User not found' ) };
+		const user: User = await user_get( id_user );
+
+		if ( !user ) return cback ? cback( err ) : reject( err );
+
+		user.password = sha512( password );
+
+		await adb_record_add( req.db, COLL_USERS, user );
+
+		return cback ? cback( null, true ) : resolve( true );
+		/*=== f2c_end post_user_admin_change_password ===*/
+	} );
+};
+// }}}
+
 // {{{ user_facerec_get ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<UserFaceRec[]>
 /**
  *
