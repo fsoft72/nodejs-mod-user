@@ -77,6 +77,12 @@ export const user_get = async ( id?: string, email?: string, wallet?: string, fa
 	return user;
 };
 
+export const users_get = async ( req: ILRequest, user_ids: string[] ): Promise<User[]> => {
+	const users: User[] = await adb_find_all( req.db, COLL_USERS, { id: { mode: "in", value: user_ids } } );
+
+	return users;
+};
+
 const user_create = ( email: string, password: string, name: string, lastname: string, enabled: boolean, language: string ) => {
 	return { id: mkid( 'user' ), email, password: sha512( password ), name, lastname, enabled, language };
 };
