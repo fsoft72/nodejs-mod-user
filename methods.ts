@@ -11,7 +11,7 @@ import {
 	User, User2FA, User2FAKeys, UserActivationCode, UserActivationCodeKeys,
 	UserDetails, UserDetailsKeys, UserFaceRec, UserFaceRecKeys, UserKeys,
 	UserPerms, UserPermsKeys, UserRegistration, UserRegistrationKeys, UserSessionData,
-	UserSessionDataKeys,
+	UserSessionDataKeys, UserSmall, UserSmallKeys,
 } from './types';
 
 import _module_perms from './perms';
@@ -83,8 +83,20 @@ export const users_get = async ( req: ILRequest, user_ids: string[] ): Promise<U
 	return users;
 };
 
-const user_create = ( email: string, password: string, name: string, lastname: string, enabled: boolean, language: string ) => {
-	return { id: mkid( 'user' ), email, password: sha512( password ), name, lastname, enabled, language };
+const user_create = async ( req: ILRequest, email: string, password: string, name: string, lastname: string, enabled: boolean, language: string ) => {
+	const domain = await system_domain_get_by_session( req );
+
+	return {
+		id: mkid( 'user' ),
+		domain: domain.code,
+		username: sha512( email ),
+		email,
+		password: sha512( password ),
+		name,
+		lastname,
+		enabled,
+		language
+	};
 };
 
 const _valid_password = ( pwd: string, err: any, cfg: ILiweConfig ) => {
@@ -328,6 +340,7 @@ const _create_user = async ( req: ILRequest, err: ILError, params: CreateUserDat
 
 	const dct = {
 		id: mkid( 'user' ),
+		domain: sd.code,
 		phone,
 		username,
 		email,
@@ -422,6 +435,8 @@ const _send_password_reset = ( req: ILRequest, user: User ) => {
 export const post_user_admin_add = ( req: ILRequest, email: string, password: string, username: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, cback: LCback = null ): Promise<User> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_admin_add ===*/
+		const domain: SystemDomain = await system_domain_get_by_session( req );
+
 		email = email.toLowerCase();
 
 		let u: User = await user_get( null, email );
@@ -431,7 +446,17 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
 		if ( !_valid_password( password, err, req.cfg ) )
 			return cback ? cback( err ) : reject( err );
 
-		u = { id: mkid( 'user' ), email, password: sha512( password ), name, lastname, enabled, language, username };
+		u = {
+			id: mkid( 'user' ),
+			domain: domain.code,
+			email,
+			password: sha512( password ),
+			name,
+			lastname,
+			enabled,
+			language,
+			username
+		};
 		u = await adb_record_add( req.db, COLL_USERS, u, UserKeys );
 
 		return cback ? cback( null, u ) : resolve( u );
@@ -917,6 +942,7 @@ export const post_user_token = ( req: ILRequest, username: string, password: str
 		const tok = await user_session_create( req, u );
 
 		const resp: UserSessionData = {
+			id: u.id,
 			access_token: tok,
 			token_type: 'bearer',
 		};
@@ -1017,6 +1043,7 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_login_remote ===*/
 		const err = { message: _( 'Invalid data for user remote login' ) };
+		const domain = await system_domain_get_by_session( req );
 
 		// Check if the challenge is valid
 		if ( !challenge_check( challenge, [ email, name, avatar ] ) )
@@ -1037,7 +1064,17 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
 
 			// extract name and lastname from string
 			const [ name_, lastname ] = name.split( ' ' );
-			user = { id: mkid( 'user' ), email, password: sha512( mkid( 'temp' ) ), name: name_, lastname, enabled: true, language: 'en', avatar };
+			user = {
+				id: mkid( 'user' ),
+				domain: domain.code,
+				email,
+				password: sha512( mkid( 'temp' ) ),
+				name: name_,
+				lastname,
+				enabled: true,
+				language: 'en',
+				avatar
+			};
 			user = await adb_record_add( req.db, COLL_USERS, user, UserKeys );
 		}
 
@@ -1474,21 +1511,7 @@ export const post_user_login_metamask = ( req: ILRequest, address: string, chall
 export const get_user_admin_get = ( req: ILRequest, id?: string, email?: string, name?: string, lastname?: string, cback: LCback = null ): Promise<User> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start get_user_admin_get ===*/
-		const [ filters, values ] = adb_prepare_filters( 'u', { id, email, name, lastname } );
-		let user: User = null;
-
-		if ( !Object.keys( filters ).length ) {
-			user = await user_get( req.user.id );
-		} else {
-			user = await adb_query_one( req.db, `
-			FOR u IN users
-				${ filters }
-				RETURN u`, values );
-		}
-
-		if ( !user ) user = {};
-
-		keys_filter( user, UserKeys );
+		const user: User = await adb_find_one( req.db, COLL_USERS, { id, email, name, lastname }, UserKeys );
 
 		return cback ? cback( null, user ) : resolve( user );
 		/*=== f2c_end get_user_admin_get ===*/
@@ -1650,7 +1673,7 @@ export const post_user_anonymous = ( req: ILRequest, ts: string, challenge: stri
 
 		if ( !valid ) return cback ? cback( err ) : reject( err );
 
-		const user: User = user_create( `${ ts }@anonymous.me`, challenge, 'guest', 'user', true, 'it' );
+		const user: User = await user_create( req, `${ ts }@anonymous.me`, challenge, 'guest', 'user', true, 'it' );
 
 		await adb_record_add( req.db, COLL_USERS, user, UserKeys );
 		/*=== f2c_end post_user_anonymous ===*/

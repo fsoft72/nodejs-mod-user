@@ -6,9 +6,9 @@ import { Address } from '../address/types';
 /** UserRegistration */
 export interface UserRegistration {
 	/** The user email */
-	email?: string;
+	email: string;
 	/** The user password */
-	password?: string;
+	password: string;
 	/** User first name */
 	name?: string;
 	/** User lastname */
@@ -38,7 +38,7 @@ export const UserActivationCodeKeys = {
 /** UserFaceRec */
 export interface UserFaceRec {
 	/** the main id field */
-	id?: string;
+	id: string;
 	/** The domain code */
 	domain?: string;
 	/** The user id */
@@ -63,11 +63,11 @@ export const UserFaceRecKeys = {
 /** User */
 export interface User {
 	/** the main id field */
-	id?: string;
+	id: string;
 	/** The domain code */
-	domain?: string;
+	domain: string;
 	/** The user email */
-	email?: string;
+	email: string;
 	username?: string;
 	/** User name */
 	name?: string;
@@ -156,7 +156,7 @@ export const UserKeys = {
 /** UserSessionData */
 export interface UserSessionData {
 	/** the main id field */
-	id?: string;
+	id: string;
 	/** The JWT access token */
 	access_token?: string;
 	/** The user name */
@@ -205,7 +205,7 @@ export const UserPermsKeys = {
 /** UserDetails */
 export interface UserDetails {
 	/** the main id field */
-	id?: string;
+	id: string;
 	username?: string;
 	/** User name */
 	name?: string;
@@ -229,7 +229,7 @@ export const UserDetailsKeys = {
 /** User2FA */
 export interface User2FA {
 	/** The ID User */
-	id_user?: string;
+	id_user: string;
 	/** The 2FA code */
 	twofactor?: string;
 	/** If T, twofactor is enabled */
@@ -243,5 +243,30 @@ export const User2FAKeys = {
 	'twofactor': { type: 'string', priv: false },
 	'enabled': { type: 'boolean', priv: false },
 	'nonce': { type: 'string', priv: false },
+};
+
+/** UserSmall */
+export interface UserSmall {
+	/** the main id field */
+	id: string;
+	/** The user domain */
+	domain: string;
+	/** The user first name */
+	name: string;
+	/** The user lastname */
+	lastname: string;
+	/** The user username */
+	username: string;
+	/** The user email */
+	email: string;
+}
+
+export const UserSmallKeys = {
+	'id': { type: 'string', priv: false },
+	'domain': { type: 'string', priv: false },
+	'name': { type: 'string', priv: false },
+	'lastname': { type: 'string', priv: false },
+	'username': { type: 'string', priv: false },
+	'email': { type: 'string', priv: false },
 };
 

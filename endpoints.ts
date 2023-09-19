@@ -28,7 +28,7 @@ import {
 	User, User2FA, User2FAKeys, UserActivationCode, UserActivationCodeKeys,
 	UserDetails, UserDetailsKeys, UserFaceRec, UserFaceRecKeys, UserKeys,
 	UserPerms, UserPermsKeys, UserRegistration, UserRegistrationKeys, UserSessionData,
-	UserSessionDataKeys,
+	UserSessionDataKeys, UserSmall, UserSmallKeys,
 } from './types';
 
 /*=== f2c_start __header ===*/
