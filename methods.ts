@@ -295,11 +295,27 @@ const _create_user_session = async ( req: ILRequest, user: User, twoFANounce = '
 		name: user.name,
 		lastname: user.lastname,
 		id: user.id,
+		avatar: user.avatar,
 		perms: user.perms,
+		group: user.group,
 		nonce: null,
 	};
 
 	return resp;
+};
+
+const _is_group_admin = ( req: ILRequest ) => {
+	// get the user perms
+	const perms = req.user?.perms;
+
+	if ( !perms[ 'user' ] ) return false;
+
+	// if the user has no group, he/she is not an admin
+	if ( !req.user?.group ) return false;
+
+	if ( perms[ 'user' ].indexOf( 'group_owner' ) != -1 ) return true;
+
+	return false;
 };
 
 interface CreateUserData {
@@ -1102,9 +1118,16 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
 export const get_user_admin_list = ( req: ILRequest, tag?: string, cback: LCback = null ): Promise<User[]> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start get_user_admin_list ===*/
+		// we need to check if the user is a super user or just a group admin
+		const is_group_admin = _is_group_admin( req );
+		let group = null;
+
+		if ( is_group_admin ) group = req.user.group;
+
 		const domain = req.session.domain_code;
 		const [ filters, values ] = adb_prepare_filters( "user", {
 			domain,
+			group,
 			deleted: {
 				mode: 'null'
 			},
@@ -2149,7 +2172,9 @@ export const user_session_create = ( req: ILRequest, user: User, cback: LCback =
 				lastname: user.lastname,
 				email: user.email,
 				perms: user.perms,
-				session_key: key
+				session_key: key,
+				group: user.group,
+				avatar: user.avatar,
 			}
 		};
 
