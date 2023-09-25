@@ -36,8 +36,6 @@ import { server_fullpath, upload_fullpath } from '../../liwe/liwe';
 import { SystemDomain } from '../system/types';
 import { system_domain_get_by_code, system_domain_get_by_session } from '../system/methods';
 import { session_create, session_del, session_get, session_id, session_remove_all } from '../session/methods';
-import { upload_add_file_name, upload_del_file, upload_get } from '../upload/methods';
-import { Upload } from '../upload/types';
 import { address_add, address_user_list } from '../address/methods';
 import { Address } from '../address/types';
 import { perm_available } from '../../liwe/auth';
@@ -166,17 +164,6 @@ export const middleware_init = ( liwe: ILiWE ) => {
 	};
 
 	liwe.app.use( auth_header );
-};
-
-const _avatar_upload = async ( req: ILRequest, u: User ) => {
-	const up: Upload = await upload_add_file_name( req, 'avatar', 'user', u.id, 'avatars', null, false, null, u.id );
-
-	if ( !up?.id ) return;
-
-	if ( u.id_upload ) await upload_del_file( u.id_upload );
-
-	u.id_upload = up.id;
-	u.avatar = up.filename;
 };
 
 const _recaptcha_check = async ( req: ILRequest, recaptcha: string, err: any ) => {
@@ -749,10 +736,12 @@ export const patch_user_update = ( req: ILRequest, email?: string, password?: st
 export const post_user_avatar = ( req: ILRequest, avatar: File, cback: LCback = null ): Promise<User> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_avatar ===*/
-		const u: Upload = await upload_add_file_name( req, 'avatar', 'user', req.user.id, 'avatars', null, true );
+		// FIXME: rewrite using media manager
+
+		// const u: Upload = await upload_add_file_name( req, 'avatar', 'user', req.user.id, 'avatars', null, true );
 		let user: User = await user_get( req.user.id );
 
-		user.avatar = u.path;
+		// user.avatar = u.path;
 
 		user = await adb_record_add( req.db, COLL_USERS, user, UserKeys );
 
@@ -776,14 +765,17 @@ export const post_user_avatar = ( req: ILRequest, avatar: File, cback: LCback = 
 export const post_user_facerec_add = ( req: ILRequest, face: File, cback: LCback = null ): Promise<UserFaceRec> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_facerec_add ===*/
-		const u: Upload = await upload_add_file_name( req, 'face', 'user', req.user.id, 'faces' );
+		// FIXME: rewrite using media manager
+
+		// const u: Upload = await upload_add_file_name( req, 'face', 'user', req.user.id, 'faces' );
 		const domain = await system_domain_get_by_session( req );
 
-		let fr: UserFaceRec = { id: mkid( 'face' ), domain: domain.code, id_user: req.user.id, id_upload: u.id, filename: u.filename };
+		// let fr: UserFaceRec = { id: mkid( 'face' ), domain: domain.code, id_user: req.user.id, id_upload: u.id, filename: u.filename };
 
-		fr = await adb_record_add( req.db, COLL_USER_FACERECS, fr, UserFaceRecKeys );
+		// fr = await adb_record_add( req.db, COLL_USER_FACERECS, fr, UserFaceRecKeys );
 
-		return cback ? cback( null, fr ) : resolve( fr );
+		// return cback ? cback( null, fr ) : resolve( fr );
+
 		/*=== f2c_end post_user_facerec_add ===*/
 	} );
 };
@@ -1630,13 +1622,14 @@ export const get_user_faces_get = ( req: ILRequest, id_user?: string, cback: LCb
 export const post_user_upload2face = ( req: ILRequest, id_upload: string, id_user?: string, cback: LCback = null ): Promise<UserFaceRec> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_upload2face ===*/
+		// FIXME: rewrite using media manager
 		if ( !id_user ) id_user = req.user.id;
 
 		if ( !perm_available( req.user, [ 'user.create' ] ) ) id_user = req.user.id;
 
-		const upload: Upload = await upload_get( id_upload );
+		// const upload: Upload = await upload_get( id_upload );
 
-		if ( !upload ) return cback ? cback( { message: _( 'Upload not found' ) } ) : reject( { message: _( 'Upload not found' ) } );
+		// if ( !upload ) return cback ? cback( { message: _( 'Upload not found' ) } ) : reject( { message: _( 'Upload not found' ) } );
 
 		// deletes old entry if exists
 		await adb_del_one( req.db, COLL_USER_FACERECS, { id_user, id_upload } );
@@ -1646,9 +1639,9 @@ export const post_user_upload2face = ( req: ILRequest, id_upload: string, id_use
 			id: mkid( 'face' ),
 			id_user,
 			id_upload,
-			domain: upload.domain,
-			filename: upload.filename,
-			path: upload.path,
+			// domain: upload.domain,
+			// filename: upload.filename,
+			// path: upload.path,
 		};
 
 		await adb_record_add( req.db, COLL_USER_FACERECS, face, UserFaceRecKeys );

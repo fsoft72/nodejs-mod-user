@@ -174,6 +174,7 @@ export interface UserSessionData {
 	id_user?: string;
 	/** The Nonce used for 2FA */
 	nonce?: string;
+	group?: string;
 }
 
 export const UserSessionDataKeys = {
@@ -187,6 +188,7 @@ export const UserSessionDataKeys = {
 	'email': { type: 'string', priv: false },
 	'id_user': { type: 'string', priv: false },
 	'nonce': { type: 'string', priv: false },
+	'group': { type: 'string', priv: false },
 };
 
 /** UserPerms */
