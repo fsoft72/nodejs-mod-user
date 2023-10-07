@@ -281,6 +281,7 @@ const _create_user_session = async ( req: ILRequest, user: User, twoFANounce = '
 		email: user.email,
 		name: user.name,
 		lastname: user.lastname,
+		username: user.username,
 		id: user.id,
 		avatar: user.avatar,
 		perms: user.perms,
@@ -775,7 +776,6 @@ export const post_user_facerec_add = ( req: ILRequest, face: File, cback: LCback
 		// fr = await adb_record_add( req.db, COLL_USER_FACERECS, fr, UserFaceRecKeys );
 
 		// return cback ? cback( null, fr ) : resolve( fr );
-
 		/*=== f2c_end post_user_facerec_add ===*/
 	} );
 };
@@ -2175,6 +2175,51 @@ export const user_session_create = ( req: ILRequest, user: User, cback: LCback =
 
 		return cback ? cback( null, tok ) : resolve( tok );
 		/*=== f2c_end user_session_create ===*/
+	} );
+};
+// }}}
+
+// {{{ user_get_by_group ( req: ILRequest, group: string, cback: LCBack = null ): Promise<User[]>
+/**
+ *
+ * Returns all the users belonging to the specified group
+ *
+ * @param req - the Request field [req]
+ * @param group - The group [req]
+ *
+ * @return : User
+ *
+ */
+export const user_get_by_group = ( req: ILRequest, group: string, cback: LCback = null ): Promise<User[]> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== f2c_start user_get_by_group ===*/
+		group = group.toUpperCase();
+		const users: User[] = await adb_find_all( req.db, COLL_USERS, { group }, UserKeys );
+
+		return cback ? cback( null, users ) : resolve( users );
+		/*=== f2c_end user_get_by_group ===*/
+	} );
+};
+// }}}
+
+// {{{ users_list ( req: ILRequest, query?: any, cback: LCBack = null ): Promise<User[]>
+/**
+ *
+ * Returns all users in the system matching a specified query
+ *
+ * @param req - the Request field [req]
+ * @param query - The query conditions [opt]
+ *
+ * @return : User
+ *
+ */
+export const users_list = ( req: ILRequest, query?: any, cback: LCback = null ): Promise<User[]> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== f2c_start users_list ===*/
+		const users: User[] = await adb_find_all( req.db, COLL_USERS, query, UserKeys );
+
+		return cback ? cback( null, users ) : resolve( users );
+		/*=== f2c_end users_list ===*/
 	} );
 };
 // }}}

@@ -21,7 +21,8 @@ import {
 	post_user_password_reset, post_user_perms_set, post_user_register, post_user_register_app, post_user_tag,
 	post_user_token, post_user_upload2face,
 	// functions
-	user_db_init, user_facerec_get, user_session_create, user_session_del, user_session_get,
+	user_db_init, user_facerec_get, user_get_by_group, user_session_create, user_session_del,
+	user_session_get, users_list,
 } from './methods';
 
 import {
