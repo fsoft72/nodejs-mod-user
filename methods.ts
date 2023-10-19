@@ -419,7 +419,7 @@ const _send_password_reset = ( req: ILRequest, user: User ) => {
 };
 /*=== f2c_end __file_header ===*/
 
-// {{{ post_user_admin_add ( req: ILRequest, email: string, password: string, username: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, cback: LCBack = null ): Promise<User>
+// {{{ post_user_admin_add ( req: ILRequest, email: string, password: string, username: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, group?: string, cback: LCBack = null ): Promise<User>
 /**
  *
  * This endpoint creates a valid user in the system, bypassing registration and verification phases.
@@ -432,11 +432,12 @@ const _send_password_reset = ( req: ILRequest, user: User ) => {
  * @param perms - User permissions [opt]
  * @param enabled - Flag T/F to know if the user is enabled [opt]
  * @param language - The user language [opt]
+ * @param group - The user group [opt]
  *
  * @return user: User
  *
  */
-export const post_user_admin_add = ( req: ILRequest, email: string, password: string, username: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, cback: LCback = null ): Promise<User> => {
+export const post_user_admin_add = ( req: ILRequest, email: string, password: string, username: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, group?: string, cback: LCback = null ): Promise<User> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_admin_add ===*/
 		const domain: SystemDomain = await system_domain_get_by_session( req );
@@ -450,6 +451,8 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
 		if ( !_valid_password( password, err, req.cfg ) )
 			return cback ? cback( err ) : reject( err );
 
+		if ( !group ) group = '';
+
 		u = {
 			id: mkid( 'user' ),
 			domain: domain.code,
@@ -459,7 +462,8 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
 			lastname,
 			enabled,
 			language,
-			username
+			username,
+			group
 		};
 		u = await adb_record_add( req.db, COLL_USERS, u, UserKeys );
 

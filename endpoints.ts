@@ -45,7 +45,7 @@ export const init = ( liwe: ILiWE ) => {
 	user_db_init ( liwe );
 
 	app.post ( '/api/user/admin/add', perms( [ "user.create" ] ), ( req: ILRequest, res: ILResponse ) => {
-		const { email, password, username, name, lastname, perms, enabled, language, ___errors } = typed_dict( req.body, [
+		const { email, password, username, name, lastname, perms, enabled, language, group, ___errors } = typed_dict( req.body, [
 			{ name: "email", type: "string", required: true },
 			{ name: "password", type: "string", required: true },
 			{ name: "username", type: "string", required: true },
@@ -53,12 +53,13 @@ export const init = ( liwe: ILiWE ) => {
 			{ name: "lastname", type: "string" },
 			{ name: "perms", type: "string[]" },
 			{ name: "enabled", type: "boolean" },
-			{ name: "language", type: "string" }
+			{ name: "language", type: "string" },
+			{ name: "group", type: "string" }
 		] );
 
 		if ( ___errors.length ) return send_error ( res, { message: `Parameters error: ${___errors.join ( ', ' )}` } );
 
-		post_user_admin_add ( req, email, password, username, name, lastname, perms, enabled, language, ( err: ILError, user: User ) => {
+		post_user_admin_add ( req, email, password, username, name, lastname, perms, enabled, language, group, ( err: ILError, user: User ) => {
 			if ( err ) return send_error( res, err );
 
 			send_ok( res, { user } );
