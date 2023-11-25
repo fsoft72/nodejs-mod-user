@@ -2058,6 +2058,47 @@ export const post_user_admin_change_password = ( req: ILRequest, id_user: string
 };
 // }}}
 
+// {{{ post_user_admin_relogin ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<UserSessionData>
+/**
+ *
+ * This endpoint allows a user to login to the system as a different user, without using login and password.
+ *
+ * @param id_user - The user ID to login into [req]
+ *
+ * @return __plain__: UserSessionData
+ *
+ */
+export const post_user_admin_relogin = ( req: ILRequest, id_user: string, cback: LCback = null ): Promise<UserSessionData> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== f2c_start post_user_admin_relogin ===*/
+		const err = { message: '' };
+
+		let user: User = await user_get( id_user );
+
+
+		if ( !user ) {
+			err.message = _( 'User not found' );
+			console.error( "Relogin: User not found: ", id_user );
+			add_suspicious_activity( req, req.res, `Relogin: User not found ${ id_user }` );
+			return cback ? cback( err ) : reject( err );
+		}
+
+		if ( user.enabled === false ) {
+			err.message = _( 'User not enabled' );
+			console.error( "Relogin: User not enabled: ", id_user );
+			add_suspicious_activity( req, req.res, `Relogin: User not enabled ${ id_user }` );
+			return cback ? cback( err ) : reject( err );
+		}
+
+		const resp: UserSessionData = await _create_user_session( req, user, '', '', err );
+		if ( err.message ) return cback ? cback( err ) : reject( err );
+
+		return cback ? cback( null, resp ) : resolve( resp );
+		/*=== f2c_end post_user_admin_relogin ===*/
+	} );
+};
+// }}}
+
 // {{{ user_facerec_get ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<UserFaceRec[]>
 /**
  *
