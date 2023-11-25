@@ -295,7 +295,7 @@ export const init = ( liwe: ILiWE ) => {
 		} );
 	} );
 
-	app.get ( '/api/user/admin/list', perms( [ "user.create" ] ), ( req: ILRequest, res: ILResponse ) => {
+	app.get ( '/api/user/admin/list', perms( [ "user.create", "user.group_owner" ] ), ( req: ILRequest, res: ILResponse ) => {
 		const { tag, ___errors } = typed_dict( req.query as any, [
 			{ name: "tag", type: "string" }
 		] );

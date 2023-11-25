@@ -10,6 +10,8 @@ const permissions = {
 	"user.perms": "Permission to change user's perms",
 	"user.admin": "Permission to do everything on User",
 	"user.password": "Can change a user password",
+	"user.group_owner": "The user is the master of a Group",
+	"user.change_identity": "Can login as another user",
 };
 
 export default permissions;
