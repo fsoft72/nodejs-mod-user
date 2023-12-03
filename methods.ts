@@ -418,6 +418,17 @@ const _send_password_reset = ( req: ILRequest, user: User ) => {
 			site_base_url: req.cfg.server.public_url,
 		}, user.email, req.cfg.smtp.from, null, null );
 };
+
+const _update_user_domain = async ( req: ILRequest, domain: SystemDomain ) => {
+	// get the user
+	const user: User = await user_get( req.user.id );
+
+	// if the current domain is 'default', we need to add the new domain as default
+	if ( !user.domain || user.domain == 'default' ) user.domain = domain.code;
+
+	// update the user
+	await adb_record_add( req.db, COLL_USERS, user );
+};
 /*=== f2c_end __file_header ===*/
 
 // {{{ post_user_admin_add ( req: ILRequest, email: string, password: string, username: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, group?: string, cback: LCBack = null ): Promise<User>
@@ -2147,6 +2158,9 @@ export const get_user_domain_invitation_accept = ( req: ILRequest, invitation: s
 		};
 
 		await adb_record_add( req.db, COLL_USER_DOMAINS, ud );
+
+		// update the user domain
+		await _update_user_domain( req, domain );
 
 		return cback ? cback( null, true ) : resolve( true );
 		/*=== f2c_end get_user_domain_invitation_accept ===*/
