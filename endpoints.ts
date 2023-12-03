@@ -12,14 +12,14 @@ import { perms } from '../../liwe/auth';
 import {
 	// endpoints function
 	delete_user_admin_del, delete_user_info_del, get_user_2fa_start, get_user_admin_get, get_user_admin_list,
-	get_user_faces_get, get_user_faces_modules, get_user_find, get_user_logout, get_user_me,
-	get_user_perms_get, get_user_register_activate, get_user_remove_me, get_user_test_create, patch_user_admin_fields,
-	patch_user_admin_update, patch_user_change_password, patch_user_profile, patch_user_set_billing, patch_user_set_bio,
-	patch_user_update, post_user_2fa_verify, post_user_admin_add, post_user_admin_change_password, post_user_admin_relogin,
-	post_user_anonymous, post_user_avatar, post_user_del_app, post_user_facerec_add, post_user_info_add,
-	post_user_login, post_user_login_2fa, post_user_login_metamask, post_user_login_remote, post_user_password_forgot,
-	post_user_password_forgot_app, post_user_password_reset, post_user_perms_set, post_user_register, post_user_register_app,
-	post_user_tag, post_user_token, post_user_upload2face,
+	get_user_domain_invitation_accept, get_user_faces_get, get_user_faces_modules, get_user_find, get_user_logout,
+	get_user_me, get_user_perms_get, get_user_register_activate, get_user_remove_me, get_user_test_create,
+	patch_user_admin_fields, patch_user_admin_update, patch_user_change_password, patch_user_profile, patch_user_set_billing,
+	patch_user_set_bio, patch_user_update, post_user_2fa_verify, post_user_admin_add, post_user_admin_change_password,
+	post_user_admin_relogin, post_user_anonymous, post_user_avatar, post_user_del_app, post_user_facerec_add,
+	post_user_info_add, post_user_login, post_user_login_2fa, post_user_login_metamask, post_user_login_remote,
+	post_user_password_forgot, post_user_password_forgot_app, post_user_password_reset, post_user_perms_set, post_user_register,
+	post_user_register_app, post_user_tag, post_user_token, post_user_upload2face,
 	// functions
 	user_db_init, user_facerec_get, user_get_by_group, user_session_create, user_session_del,
 	user_session_get, users_list,
@@ -27,13 +27,13 @@ import {
 
 import {
 	User, User2FA, User2FAKeys, UserActivationCode, UserActivationCodeKeys,
-	UserDetails, UserDetailsKeys, UserFaceRec, UserFaceRecKeys, UserKeys,
-	UserPerms, UserPermsKeys, UserRegistration, UserRegistrationKeys, UserSessionData,
-	UserSessionDataKeys, UserSmall, UserSmallKeys,
+	UserDetails, UserDetailsKeys, UserDomain, UserDomainKeys, UserFaceRec,
+	UserFaceRecKeys, UserKeys, UserPerms, UserPermsKeys, UserRegistration,
+	UserRegistrationKeys, UserSessionData, UserSessionDataKeys, UserSmall, UserSmallKeys,
 } from './types';
 
 /*=== f2c_start __header ===*/
-
+import { SystemDomainPublic } from '../system/types';
 /*=== f2c_end __header ===*/
 
 export const init = ( liwe: ILiWE ) => {
@@ -709,6 +709,20 @@ export const init = ( liwe: ILiWE ) => {
 			if ( err ) return send_error( res, err );
 
 			send_ok( res, { ...__plain__ } );
+		} );
+	} );
+
+	app.get ( '/api/user/domain/invitation/accept', perms( [ "is-logged" ] ), ( req: ILRequest, res: ILResponse ) => {
+		const { invitation, ___errors } = typed_dict( req.query as any, [
+			{ name: "invitation", type: "string", required: true }
+		] );
+
+		if ( ___errors.length ) return send_error ( res, { message: `Parameters error: ${___errors.join ( ', ' )}` } );
+
+		get_user_domain_invitation_accept ( req, invitation, ( err: ILError, ok: boolean ) => {
+			if ( err ) return send_error( res, err );
+
+			send_ok( res, { ok } );
 		} );
 	} );
 

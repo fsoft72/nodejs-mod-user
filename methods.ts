@@ -9,9 +9,9 @@ import { system_permissions_register } from '../system/methods';
 
 import {
 	User, User2FA, User2FAKeys, UserActivationCode, UserActivationCodeKeys,
-	UserDetails, UserDetailsKeys, UserFaceRec, UserFaceRecKeys, UserKeys,
-	UserPerms, UserPermsKeys, UserRegistration, UserRegistrationKeys, UserSessionData,
-	UserSessionDataKeys, UserSmall, UserSmallKeys,
+	UserDetails, UserDetailsKeys, UserDomain, UserDomainKeys, UserFaceRec,
+	UserFaceRecKeys, UserKeys, UserPerms, UserPermsKeys, UserRegistration,
+	UserRegistrationKeys, UserSessionData, UserSessionDataKeys, UserSmall, UserSmallKeys,
 } from './types';
 
 import _module_perms from './perms';
@@ -25,6 +25,7 @@ const _ = ( txt: string, vals: any = null, plural = false ) => {
 const COLL_USER_FACERECS = "user_facerecs";
 const COLL_USERS = "users";
 const COLL_USER_2FAS = "user_2fas";
+const COLL_USER_DOMAINS = "user_domains";
 
 /*=== f2c_start __file_header === */
 import { mkid, challenge_check, challenge_create, isValidEmail, jwt_crypt, jwt_decrypt, keys_filter, keys_valid, random_string, recaptcha_check, set_attr, sha512, unique_code, unique_code_numbers } from '../../liwe/utils';
@@ -33,7 +34,7 @@ import { add_suspicious_activity } from '../../liwe/defender';
 import { send_mail_template } from '../../liwe/mail';
 import { server_fullpath, upload_fullpath } from '../../liwe/liwe';
 
-import { SystemDomain } from '../system/types';
+import { SystemDomain, SystemDomainPublic } from '../system/types';
 import { system_domain_get_by_code, system_domain_get_by_session } from '../system/methods';
 import { session_create, session_del, session_get, session_id, session_remove_all } from '../session/methods';
 import { address_add, address_user_list } from '../address/methods';
@@ -2099,6 +2100,58 @@ export const post_user_admin_relogin = ( req: ILRequest, id_user: string, cback:
 };
 // }}}
 
+// {{{ get_user_domain_invitation_accept ( req: ILRequest, invitation: string, cback: LCBack = null ): Promise<boolean>
+/**
+ *
+ * This endpoint adds a user to a new domain using a special invitation link. The invitation link is unique for each user.
+ * The user must already have an account in the system.
+ *
+ * @param invitation - The invitation [req]
+ *
+ * @return ok: boolean
+ *
+ */
+export const get_user_domain_invitation_accept = ( req: ILRequest, invitation: string, cback: LCback = null ): Promise<boolean> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== f2c_start get_user_domain_invitation_accept ===*/
+		// invitation in a base64 encoded string containing the domain id, the expiration date and the challenge in JSON format
+		const err = { message: _( 'Invalid invitation' ) };
+		let inv: string = Buffer.from( invitation, 'base64' ).toString( 'utf8' );
+		let data: any = null;
+
+		console.log( "=== INV: ", inv );
+
+		try {
+			data = JSON.parse( inv );
+		} catch ( e ) {
+			return cback ? cback( err ) : reject( err );
+		}
+
+		const challenge_fields = [ data.id_domain, data.expire, data.created ];
+		const check_challenge = challenge_create( challenge_fields, true );
+
+		if ( check_challenge != data.challenge ) {
+			error( 'Invalid challenge', { received: data.challenge, expected: check_challenge } );
+			return cback ? cback( err ) : reject( err );
+		}
+
+		// delete the id_user / id_domain from user_domains if exists
+		await adb_del_one( req.db, COLL_USER_DOMAINS, { id_user: data.id_user, id_domain: data.id_domain } );
+
+		// add the user to the domain
+		const ud: UserDomain = {
+			id_user: data.id_user,
+			id_domain: data.id_domain,
+		};
+
+		await adb_record_add( req.db, COLL_USER_DOMAINS, ud );
+
+		return cback ? cback( null, true ) : resolve( true );
+		/*=== f2c_end get_user_domain_invitation_accept ===*/
+	} );
+};
+// }}}
+
 // {{{ user_facerec_get ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<UserFaceRec[]>
 /**
  *
@@ -2308,6 +2361,11 @@ export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boole
 		await adb_collection_init( liwe.db, COLL_USER_2FAS, [
 			{ type: "persistent", fields: [ "id_user" ], unique: true },
 			{ type: "persistent", fields: [ "nonce" ], unique: false },
+		], { drop: false } );
+
+		await adb_collection_init( liwe.db, COLL_USER_DOMAINS, [
+			{ type: "persistent", fields: [ "id_user" ], unique: true },
+			{ type: "persistent", fields: [ "id_domain" ], unique: false },
 		], { drop: false } );
 
 		/*=== f2c_start user_db_init ===*/

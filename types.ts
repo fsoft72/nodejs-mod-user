@@ -276,3 +276,15 @@ export const UserSmallKeys = {
 	'email': { type: 'string', priv: false },
 };
 
+/** UserDomain */
+export interface UserDomain {
+	/** the main id field */
+	id_user: string;
+	id_domain?: string;
+}
+
+export const UserDomainKeys = {
+	'id_user': { type: 'string', priv: false },
+	'id_domain': { type: 'string', priv: false },
+};
+
