@@ -5,7 +5,7 @@
 
 import { ILRequest, ILResponse, LCback, ILiweConfig, ILError, ILiWE } from '../../liwe/types';
 import { $l } from '../../liwe/locale';
-import { system_permissions_register } from '../system/methods';
+import { domain_get, system_permissions_register } from '../system/methods';
 
 import {
 	User, User2FA, User2FAKeys, UserActivationCode, UserActivationCodeKeys,
@@ -2119,8 +2119,6 @@ export const get_user_domain_invitation_accept = ( req: ILRequest, invitation: s
 		let inv: string = Buffer.from( invitation, 'base64' ).toString( 'utf8' );
 		let data: any = null;
 
-		console.log( "=== INV: ", inv );
-
 		try {
 			data = JSON.parse( inv );
 		} catch ( e ) {
@@ -2135,19 +2133,41 @@ export const get_user_domain_invitation_accept = ( req: ILRequest, invitation: s
 			return cback ? cback( err ) : reject( err );
 		}
 
+		const domain: SystemDomain = await domain_get( data.id_domain );
+
 		// delete the id_user / id_domain from user_domains if exists
-		await adb_del_one( req.db, COLL_USER_DOMAINS, { id_user: data.id_user, id_domain: data.id_domain } );
+		await adb_del_one( req.db, COLL_USER_DOMAINS, { id_user: req.user.id, id_domain: data.id_domain } );
 
 		// add the user to the domain
 		const ud: UserDomain = {
-			id_user: data.id_user,
+			name: domain.name,
+			id_user: req.user.id,
 			id_domain: data.id_domain,
+			preferred: false,
 		};
 
 		await adb_record_add( req.db, COLL_USER_DOMAINS, ud );
 
 		return cback ? cback( null, true ) : resolve( true );
 		/*=== f2c_end get_user_domain_invitation_accept ===*/
+	} );
+};
+// }}}
+
+// {{{ get_user_domains_list ( req: ILRequest, cback: LCBack = null ): Promise<UserDomain[]>
+/**
+ *
+ *
+ * @return domains: UserDomain
+ *
+ */
+export const get_user_domains_list = ( req: ILRequest, cback: LCback = null ): Promise<UserDomain[]> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== f2c_start get_user_domains_list ===*/
+		const domains: UserDomain[] = await adb_find_all( req.db, COLL_USER_DOMAINS, { id_user: req.user.id }, UserDomainKeys );
+
+		return cback ? cback( null, domains ) : resolve( domains );
+		/*=== f2c_end get_user_domains_list ===*/
 	} );
 };
 // }}}

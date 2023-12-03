@@ -280,11 +280,18 @@ export const UserSmallKeys = {
 export interface UserDomain {
 	/** the main id field */
 	id_user: string;
-	id_domain?: string;
+	/** The domain ID */
+	id_domain: string;
+	/** The domain name */
+	name: string;
+	/** If T, this is the preferred domain */
+	preferred: boolean;
 }
 
 export const UserDomainKeys = {
 	'id_user': { type: 'string', priv: false },
 	'id_domain': { type: 'string', priv: false },
+	'name': { type: 'string', priv: false },
+	'preferred': { type: 'boolean', priv: false },
 };
 
