@@ -460,6 +460,9 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
 		const err = { message: _( 'User already exists in the system' ) };
 		if ( u ) return cback ? cback( err ) : reject( err );
 
+		u = await user_get( null, null, null, false, username );
+		if ( u ) return cback ? cback( err ) : reject( err );
+
 		if ( !_valid_password( password, err, req.cfg ) )
 			return cback ? cback( err ) : reject( err );
 
@@ -475,6 +478,7 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
 			enabled,
 			language,
 			username,
+			perms,
 			group
 		};
 		u = await adb_record_add( req.db, COLL_USERS, u, UserKeys );
