@@ -42,6 +42,7 @@ import { Address } from '../address/types';
 import { perm_available } from '../../liwe/auth';
 import { adb_collection_init, adb_del_one, adb_find_all, adb_find_one, adb_prepare_filters, adb_query_all, adb_query_one, adb_record_add } from '../../liwe/db/arango';
 import { error } from '../../liwe/console_colors';
+import { liwe_event_emit } from '../../liwe/events';
 
 const twofactor = require( "node-2fa" );
 
@@ -377,7 +378,9 @@ const _create_user = async ( req: ILRequest, err: ILError, params: CreateUserDat
 		return null;
 	}
 
-	await adb_record_add( req.db, COLL_USERS, dct );
+	const usr = await adb_record_add( req.db, COLL_USERS, dct );
+
+	await liwe_event_emit( req, 'user.create', usr );
 
 	return dct;
 };
@@ -483,6 +486,8 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
 		};
 		u = await adb_record_add( req.db, COLL_USERS, u, UserKeys );
 
+		liwe_event_emit( req, 'user.create', u );
+
 		return cback ? cback( null, u ) : resolve( u );
 		/*=== f2c_end post_user_admin_add ===*/
 	} );
@@ -540,6 +545,8 @@ export const patch_user_admin_update = ( req: ILRequest, id: string, email?: str
 		u.email = u.email.toLowerCase();
 		u = await adb_record_add( req.db, COLL_USERS, u, UserKeys );
 
+		await liwe_event_emit( req, 'user.update', { mode: 'admin.update', user: u } );
+
 		return cback ? cback( null, u ) : resolve( u );
 		/*=== f2c_end patch_user_admin_update ===*/
 	} );
@@ -572,6 +579,8 @@ export const delete_user_admin_del = ( req: ILRequest, id_user: string, cback: L
 		u.deleted = new Date();
 
 		await adb_record_add( req.db, COLL_USERS, u );
+
+		await liwe_event_emit( req, 'user.delete', u );
 
 		return cback ? cback( null, id_user ) : resolve( id_user );
 		/*=== f2c_end delete_user_admin_del ===*/
@@ -623,6 +632,8 @@ export const patch_user_admin_fields = ( req: ILRequest, id: string, data: any, 
 		}
 
 		u = await adb_record_add( req.db, COLL_USERS, { ...u, ...data }, UserKeys );
+
+		await liwe_event_emit( req, 'user.update', { mode: 'admin.update', user: u } );
 
 		return cback ? cback( null, u ) : resolve( u );
 		/*=== f2c_end patch_user_admin_fields ===*/
@@ -737,6 +748,8 @@ export const patch_user_update = ( req: ILRequest, email?: string, password?: st
 
 		u = await adb_record_add( req.db, COLL_USERS, u, UserKeys );
 
+		await liwe_event_emit( req, 'user.update', { mode: 'update', user: u } );
+
 		return cback ? cback( null, u ) : resolve( u );
 		/*=== f2c_end patch_user_update ===*/
 	} );
@@ -765,6 +778,8 @@ export const post_user_avatar = ( req: ILRequest, avatar: File, cback: LCback = 
 		// user.avatar = u.path;
 
 		user = await adb_record_add( req.db, COLL_USERS, user, UserKeys );
+
+		await liwe_event_emit( req, 'user.update', { mode: 'avatar', user } );
 
 		return cback ? cback( null, user ) : resolve( user );
 		/*=== f2c_end post_user_avatar ===*/
@@ -882,6 +897,8 @@ export const post_user_password_reset = ( req: ILRequest, email: string, code: s
 
 		await adb_record_add( _liwe.db, COLL_USERS, user );
 
+		await liwe_event_emit( req, 'user.update', { mode: 'password', user } );
+
 		return cback ? cback( null, true ) : resolve( true );
 		/*=== f2c_end post_user_password_reset ===*/
 	} );
@@ -911,6 +928,8 @@ export const get_user_register_activate = ( req: ILRequest, code: string, cback:
 
 		await adb_record_add( _liwe.db, COLL_USERS, u );
 
+		liwe_event_emit( req, 'user.update', { mode: 'activate', user: u } );
+
 		return cback ? cback( null, u ) : resolve( u );
 		/*=== f2c_end get_user_register_activate ===*/
 	} );
@@ -936,6 +955,8 @@ export const post_user_tag = ( req: ILRequest, id_user: string, tags: string[], 
 		user = await tag_obj( req, tags, id_user, 'user' ) as any;
 
 		user = await adb_record_add( _liwe.db, COLL_USERS, user );
+
+		await liwe_event_emit( req, 'user.update', { mode: 'tag', user } );
 
 		return cback ? cback( null, user ) : resolve( user );
 		/*=== f2c_end post_user_tag ===*/
@@ -1104,6 +1125,8 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
 				avatar
 			};
 			user = await adb_record_add( req.db, COLL_USERS, user, UserKeys );
+
+			await liwe_event_emit( req, 'user.create', user );
 		}
 
 		// If the user exists we create a valid session and return
@@ -1246,6 +1269,8 @@ export const post_user_perms_set = ( req: ILRequest, id_user: string, perms: Use
 		user.perms = res;  // perms as any;
 		await adb_record_add( req.db, COLL_USERS, user );
 
+		await liwe_event_emit( req, 'user.update', { mode: 'perms', user } );
+
 		return cback ? cback( null, true ) : resolve( true );
 		/*=== f2c_end post_user_perms_set ===*/
 	} );
@@ -1274,6 +1299,7 @@ export const post_user_info_add = ( req: ILRequest, key: string, data: any, cbac
 		if ( key ) u.extra[ key ] = data;
 
 		await adb_record_add( req.db, COLL_USERS, u );
+		await liwe_event_emit( req, 'user.update', { mode: 'info', user: u } );
 
 		return cback ? cback( null, 1 ) : resolve( 1 as any );
 		/*=== f2c_end post_user_info_add ===*/
@@ -1299,6 +1325,7 @@ export const delete_user_info_del = ( req: ILRequest, key: string, cback: LCback
 		u.extra[ key ] = '__@@_invalid_@@__';
 
 		await adb_record_add( req.db, COLL_USERS, u );
+		await liwe_event_emit( req, 'user.update', { mode: 'info', user: u } );
 
 		return cback ? cback( null, true ) : resolve( true );
 		/*=== f2c_end delete_user_info_del ===*/
@@ -1342,6 +1369,8 @@ export const patch_user_profile = ( req: ILRequest, name?: string, lastname?: st
 		u = { ...u, ...keys_valid( { name, lastname, phone, facebook, twitter, linkedin, instagram, website } ) };
 
 		await adb_record_add( req.db, COLL_USERS, u );
+		await liwe_event_emit( req, 'user.update', { mode: 'profile', user: u } );
+
 		await address_add( req, u.id, addr_street, addr_nr, "home", "home", addr_city, addr_zip, addr_state, addr_country, null, null, null, null, null, null, true );
 
 		await _addresses_add( req, u );
@@ -1406,6 +1435,7 @@ export const patch_user_change_password = ( req: ILRequest, old_password: string
 		user.password = sha512( new_password, false );
 
 		await adb_record_add( req.db, COLL_USERS, user );
+		await liwe_event_emit( req, 'user.update', { mode: 'password', user } );
 
 		return cback ? cback( null, true ) : resolve( true );
 		/*=== f2c_end patch_user_change_password ===*/
@@ -1434,6 +1464,7 @@ export const patch_user_set_bio = ( req: ILRequest, tagline?: string, bio?: stri
 		if ( bio ) user.bio = bio;
 
 		user = await adb_record_add( req.db, COLL_USERS, user, UserKeys );
+		await liwe_event_emit( req, 'user.update', { mode: 'bio', user } );
 
 		return cback ? cback( null, user ) : resolve( user );
 		/*=== f2c_end patch_user_set_bio ===*/
@@ -1571,6 +1602,7 @@ export const get_user_remove_me = ( req: ILRequest, cback: LCback = null ): Prom
 		u.enabled = false;
 
 		await adb_record_add( req.db, COLL_USERS, u );
+		await liwe_event_emit( req, 'user.delete', u );
 		await get_user_logout( req );
 
 		return cback ? cback( null, true ) : resolve( true );
@@ -1665,6 +1697,7 @@ export const post_user_upload2face = ( req: ILRequest, id_upload: string, id_use
 		};
 
 		await adb_record_add( req.db, COLL_USER_FACERECS, face, UserFaceRecKeys );
+		await liwe_event_emit( req, 'user.update', { mode: 'face', user: face } );
 
 		return cback ? cback( null, face ) : resolve( face );
 		/*=== f2c_end post_user_upload2face ===*/
@@ -1712,6 +1745,10 @@ export const post_user_anonymous = ( req: ILRequest, ts: string, challenge: stri
 		const user: User = await user_create( req, `${ ts }@anonymous.me`, challenge, 'guest', 'user', true, 'it' );
 
 		await adb_record_add( req.db, COLL_USERS, user, UserKeys );
+		await liwe_event_emit( req, 'user.create', user );
+
+		liwe_event_emit( req, 'user.create', user );
+
 		/*=== f2c_end post_user_anonymous ===*/
 	} );
 };
@@ -1914,6 +1951,7 @@ export const post_user_del_app = ( req: ILRequest, id_user: string, username: st
 		user.deleted = new Date();
 
 		await adb_record_add( req.db, COLL_USERS, user );
+		await liwe_event_emit( req, 'user.delete', user );
 
 		return cback ? cback( null, true ) : resolve( true );
 		/*=== f2c_end post_user_del_app ===*/
@@ -1956,6 +1994,7 @@ export const get_user_2fa_start = ( req: ILRequest, cback: LCback = null ): Prom
 
 		// await adb_del_one( req.db, COLL_USER_2FAS, { id_user: user.id } );
 		await adb_record_add( req.db, COLL_USER_2FAS, user2FA );
+		await liwe_event_emit( req, 'user.2fa', user );
 
 		// We return the QR Code URL
 		const url = newSecret.qr;
@@ -2038,6 +2077,7 @@ export const post_user_2fa_verify = ( req: ILRequest, code: string, cback: LCbac
 		user2FA.enabled = true;
 
 		await adb_record_add( req.db, COLL_USER_2FAS, user2FA );
+		await liwe_event_emit( req, 'user.2fa', user );
 
 		return cback ? cback( null, true ) : resolve( true );
 		/*=== f2c_end post_user_2fa_verify ===*/
@@ -2067,6 +2107,7 @@ export const post_user_admin_change_password = ( req: ILRequest, id_user: string
 		user.password = sha512( password );
 
 		await adb_record_add( req.db, COLL_USERS, user );
+		await liwe_event_emit( req, 'user.update', { mode: 'password', user } );
 
 		return cback ? cback( null, true ) : resolve( true );
 		/*=== f2c_end post_user_admin_change_password ===*/
@@ -2162,6 +2203,7 @@ export const get_user_domain_invitation_accept = ( req: ILRequest, invitation: s
 		};
 
 		await adb_record_add( req.db, COLL_USER_DOMAINS, ud );
+		await liwe_event_emit( req, 'user.domain', ud );
 
 		// update the user domain
 		await _update_user_domain( req, domain );
