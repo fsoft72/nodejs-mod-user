@@ -122,7 +122,7 @@ const _valid_password = ( pwd: string, err: any, cfg: ILiweConfig ) => {
 		return false;
 	}
 
-	const special_chars = '^!.,@#<>+£$%&/();-';
+	const special_chars = '^!?.,@#<>+£$%&/();-';
 	let found = false;
 
 	special_chars.split( "" ).forEach( ( c ) => {
