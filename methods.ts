@@ -1117,6 +1117,7 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
 			user = {
 				id: mkid( 'user' ),
 				domain: domain.code,
+				username: email,
 				email,
 				password: sha512( mkid( 'temp' ) ),
 				name: name_,
