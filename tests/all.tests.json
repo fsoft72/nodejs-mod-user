@@ -6,6 +6,11 @@
 	"actions": [
 		{
 			"action": "include",
+			"filename": "user.refresh_token.json",
+			"exec": true
+		},
+		{
+			"action": "include",
 			"filename": "user.tests.json",
 			"exec": true
 		}

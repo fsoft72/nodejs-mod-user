@@ -60,11 +60,11 @@ export const email_exists = async ( req: ILRequest, email: string ): Promise<boo
 	return user ? true : false;
 };
 
-export const user_get = async ( id?: string, email?: string, wallet?: string, facerec?: boolean, username?: string, phone?: string ): Promise<User> => {
+export const user_get = async ( id?: string, email?: string, wallet?: string, facerec?: boolean, username?: string, phone?: string, refresh_token?: string ): Promise<User> => {
 	if ( email ) email = email.trim().toLowerCase();
 	if ( username ) username = username.trim().toLowerCase();
 
-	const user: User = await adb_find_one( _liwe.db, COLL_USERS, { id, email, wallet, username, phone } );
+	const user: User = await adb_find_one( _liwe.db, COLL_USERS, { id, email, wallet, username, phone, refresh_token } );
 
 	if ( !user ) return null;
 
@@ -279,11 +279,16 @@ const _create_user_session = async ( req: ILRequest, user: User, twoFANounce = '
 		await adb_record_add( req.db, COLL_USER_2FAS, user2FA );
 	}
 
+	// first of all, we change the refresh token
+	user.refresh_token = mkid( 'tok' );
+	await adb_record_add( req.db, COLL_USERS, user );
+
 	// If we get here, we can create the session
 	const tok: string = await user_session_create( req, user );
 
 	const resp: UserSessionData = {
 		access_token: tok,
+		refresh_token: user.refresh_token,
 		token_type: 'bearer',
 		email: user.email,
 		name: user.name,
@@ -1008,6 +1013,7 @@ export const post_user_token = ( req: ILRequest, username: string, password: str
 		const resp: UserSessionData = {
 			id: u.id,
 			access_token: tok,
+			refresh_token: u.refresh_token,
 			token_type: 'bearer',
 		};
 
@@ -1216,9 +1222,14 @@ export const get_user_logout = ( req: ILRequest, cback: LCback = null ): Promise
 		/*=== f2c_start get_user_logout ===*/
 		if ( !req.user ) return cback ? cback( null, false ) : resolve( false as any );
 
+		const u: User = await user_get( req.user.id );
 		const [ key, sess_id ] = await session_id( req, null );
 
 		await session_del( req, key );
+
+		// when the user logs out, we set a fake refresh token
+		u.refresh_token = mkid( '---' );
+		await adb_record_add( req.db, COLL_USERS, u );
 
 		return cback ? cback( null, true ) : resolve( true as any );
 		/*=== f2c_end get_user_logout ===*/
@@ -2270,7 +2281,20 @@ export const get_user_domains_list = ( req: ILRequest, cback: LCback = null ): P
 export const post_user_login_refresh = ( req: ILRequest, token: string, cback: LCback = null ): Promise<UserSessionData> => {
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_login_refresh ===*/
+		const err = { message: _( 'Invalid token' ) };
+		const user: User = await user_get( null, null, null, false, null, null, token );
 
+		if ( !user ) return cback ? cback( err ) : reject( err );
+
+		// we have to refresh the refresh token
+		user.refresh_token = mkid( 'tok' );
+
+		await adb_record_add( req.db, COLL_USERS, user );
+
+		// If the user exists we create a valid session and return
+		const resp: UserSessionData = await _create_user_session( req, user, '', '', null );
+
+		return cback ? cback( null, resp ) : resolve( resp );
 		/*=== f2c_end post_user_login_refresh ===*/
 	} );
 };
