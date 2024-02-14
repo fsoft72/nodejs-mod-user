@@ -119,6 +119,10 @@ export interface User {
 	wallet?: string;
 	/** The user group */
 	group?: string;
+	/** When the user signed the privacy checkbox */
+	privacy?: Date;
+	/** The refresh token */
+	refresh_token?: string;
 }
 
 export const UserKeys = {
@@ -151,6 +155,8 @@ export const UserKeys = {
 	'faces': { type: 'UserFaceRec[]', priv: false },
 	'wallet': { type: 'string', priv: false },
 	'group': { type: 'string', priv: false },
+	'privacy': { type: 'Date', priv: false },
+	'refresh_token': { type: 'string', priv: false },
 };
 
 /** UserSessionData */
@@ -178,6 +184,8 @@ export interface UserSessionData {
 	group?: string;
 	/** The user username */
 	username?: string;
+	/** The refresh token */
+	refresh_token?: string;
 }
 
 export const UserSessionDataKeys = {
@@ -193,6 +201,7 @@ export const UserSessionDataKeys = {
 	'nonce': { type: 'string', priv: false },
 	'group': { type: 'string', priv: false },
 	'username': { type: 'string', priv: false },
+	'refresh_token': { type: 'string', priv: false },
 };
 
 /** UserPerms */

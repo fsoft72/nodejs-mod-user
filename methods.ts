@@ -5,7 +5,7 @@
 
 import { ILRequest, ILResponse, LCback, ILiweConfig, ILError, ILiWE } from '../../liwe/types';
 import { $l } from '../../liwe/locale';
-import { domain_get, system_permissions_register } from '../system/methods';
+import { system_permissions_register } from '../system/methods';
 
 import {
 	User, User2FA, User2FAKeys, UserActivationCode, UserActivationCodeKeys,
@@ -33,6 +33,7 @@ import { tag_obj } from '../tag/methods';
 import { add_suspicious_activity } from '../../liwe/defender';
 import { send_mail_template } from '../../liwe/mail';
 import { server_fullpath, upload_fullpath } from '../../liwe/liwe';
+import { domain_get } from '../system/methods';
 
 import { SystemDomain, SystemDomainPublic } from '../system/types';
 import { system_domain_get_by_code, system_domain_get_by_session } from '../system/methods';
@@ -84,11 +85,12 @@ export const users_get = async ( req: ILRequest, user_ids: string[] ): Promise<U
 	return users;
 };
 
+/*
 const user_create = async ( req: ILRequest, email: string, password: string, name: string, lastname: string, enabled: boolean, language: string ) => {
 	const domain = await system_domain_get_by_session( req );
 
 	return {
-		id: mkid( 'user' ),
+		id: mk__id( 'user' ),
 		domain: domain.code,
 		username: sha512( email ),
 		email,
@@ -96,9 +98,11 @@ const user_create = async ( req: ILRequest, email: string, password: string, nam
 		name,
 		lastname,
 		enabled,
-		language
+		language,
+		refresh_token: mkid( 'tok' ),
 	};
 };
+*/
 
 const _valid_password = ( pwd: string, err: any, cfg: ILiweConfig ) => {
 	if ( !cfg.user.password ) return true;
@@ -310,6 +314,7 @@ const _is_group_admin = ( req: ILRequest ) => {
 };
 
 interface CreateUserData {
+	domain?: string;
 	username?: string;
 	email?: string;
 	phone?: string;
@@ -319,16 +324,22 @@ interface CreateUserData {
 	enabled?: boolean;
 	visible?: boolean;
 	group?: string;
+	avatar?: string;
+	language?: string;
+	perms?: string[];
 }
 
-const _create_user = async ( req: ILRequest, err: ILError, params: CreateUserData ) => {
-	let { username, email, phone, name, lastname, password, group, enabled = false, visible = false } = params;
-	const domain = '__system__';
-	const sd: SystemDomain = await system_domain_get_by_code( domain );
+const _create_user = async ( req: ILRequest, err: ILError, params: CreateUserData ): Promise<User | null> => {
+	let { username, email, phone, name, lastname, password, group, enabled = false, visible = false, avatar = '', language = 'it', domain = '', perms = [] } = params;
 
-	if ( !sd ) {
-		err.message = _( 'System domain not found' );
-		return null;
+	if ( !domain ) {
+		const sd: SystemDomain = await system_domain_get_by_session( req );
+		if ( !sd ) {
+			err.message = _( 'System domain not found' );
+			return null;
+		}
+
+		domain = sd.code;
 	}
 
 	if ( !username ) username = email.split( "@" )[ 0 ].replace( /\./g, '_' );
@@ -347,17 +358,20 @@ const _create_user = async ( req: ILRequest, err: ILError, params: CreateUserDat
 
 	const dct = {
 		id: mkid( 'user' ),
-		domain: sd.code,
+		domain,
 		phone,
 		username,
 		email,
+		avatar,
 		password: sha512( password ),
 		name,
 		lastname,
 		enabled,
 		visible,
+		language,
 		group,
-		id_domain: sd.id,
+		perms,
+		refresh_token: mkid( 'tok' ),
 	};
 
 	_user_code( req, dct );
@@ -383,7 +397,7 @@ const _create_user = async ( req: ILRequest, err: ILError, params: CreateUserDat
 
 	await liwe_event_emit( req, USER_EVENT_CREATE, usr );
 
-	return dct;
+	return usr;
 };
 
 const _user_code = ( req: ILRequest, user: User ) => {
@@ -472,8 +486,7 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
 
 		if ( !group ) group = '';
 
-		u = {
-			id: mkid( 'user' ),
+		u = await _create_user( req, err, {
 			domain: domain.code,
 			email,
 			password: sha512( password ),
@@ -484,10 +497,11 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
 			username,
 			perms,
 			group
-		};
-		u = await adb_record_add( req.db, COLL_USERS, u, UserKeys );
+		} );
 
-		liwe_event_emit( req, USER_EVENT_CREATE, u );
+		if ( !u ) return cback ? cback( err ) : reject( err );
+
+		keys_filter( u, UserKeys );
 
 		return cback ? cback( null, u ) : resolve( u );
 		/*=== f2c_end post_user_admin_add ===*/
@@ -807,7 +821,7 @@ export const post_user_facerec_add = ( req: ILRequest, face: File, cback: LCback
 		// const u: Upload = await upload_add_file_name( req, 'face', 'user', req.user.id, 'faces' );
 		const domain = await system_domain_get_by_session( req );
 
-		// let fr: UserFaceRec = { id: mkid( 'face' ), domain: domain.code, id_user: req.user.id, id_upload: u.id, filename: u.filename };
+		// let fr: UserFaceRec = { id: mk__id( 'face' ), domain: domain.code, id_user: req.user.id, id_upload: u.id, filename: u.filename };
 
 		// fr = await adb_record_add( req.db, COLL_USER_FACERECS, fr, UserFaceRecKeys );
 
@@ -1114,8 +1128,12 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
 
 			// extract name and lastname from string
 			const [ name_, lastname ] = name.split( ' ' );
+			user = await _create_user( req, err, { email, name: name_, lastname, avatar } );
+
+			if ( !user ) return cback ? cback( err ) : reject( err );
+			/*
 			user = {
-				id: mkid( 'user' ),
+				id: mk__id( 'user' ),
 				domain: domain.code,
 				username: email,
 				email,
@@ -1129,6 +1147,7 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
 			user = await adb_record_add( req.db, COLL_USERS, user, UserKeys );
 
 			await liwe_event_emit( req, USER_EVENT_CREATE, user );
+			*/
 		}
 
 		// If the user exists we create a valid session and return
@@ -1744,11 +1763,14 @@ export const post_user_anonymous = ( req: ILRequest, ts: string, challenge: stri
 
 		if ( !valid ) return cback ? cback( err ) : reject( err );
 
-		const user: User = await user_create( req, `${ ts }@anonymous.me`, challenge, 'guest', 'user', true, 'it' );
+		// const user: User = await user_create( req, `${ ts }@anonymous.me`, challenge, 'guest', 'user', true, 'it' );
+		const user: User = await _create_user( req, err, { email: `${ ts }@anonymous.me`, name: 'guest', lastname: 'user', enabled: true, language: 'it' } );
 
-		await adb_record_add( req.db, COLL_USERS, user, UserKeys );
+		if ( !user ) return cback ? cback( err ) : reject( err );
+
+
+		// await adb_record_add( req.db, COLL_USERS, user, UserKeys );
 		await liwe_event_emit( req, USER_EVENT_CREATE, user );
-
 		/*=== f2c_end post_user_anonymous ===*/
 	} );
 };
@@ -2232,6 +2254,28 @@ export const get_user_domains_list = ( req: ILRequest, cback: LCback = null ): P
 };
 // }}}
 
+// {{{ post_user_login_refresh ( req: ILRequest, token: string, cback: LCBack = null ): Promise<UserSessionData>
+/**
+ *
+ * Log in the user using the refresh token.
+ * If the token is valid, the user is logged in again as if the standard `/user/login` was called.
+ * A new refresh token will be issued and you should save it for further logins.
+ * If the user is known, a JWT token with the running session is returned to the system.
+ *
+ * @param token - the user refresh token [req]
+ *
+ * @return __plain__: UserSessionData
+ *
+ */
+export const post_user_login_refresh = ( req: ILRequest, token: string, cback: LCback = null ): Promise<UserSessionData> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== f2c_start post_user_login_refresh ===*/
+
+		/*=== f2c_end post_user_login_refresh ===*/
+	} );
+};
+// }}}
+
 // {{{ user_facerec_get ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<UserFaceRec[]>
 /**
  *
@@ -2436,6 +2480,8 @@ export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boole
 			{ type: "persistent", fields: [ "id_upload" ], unique: false },
 			{ type: "persistent", fields: [ "deleted" ], unique: false },
 			{ type: "persistent", fields: [ "group" ], unique: false },
+			{ type: "persistent", fields: [ "privacy" ], unique: false },
+			{ type: "persistent", fields: [ "refresh_token" ], unique: true },
 		], { drop: false } );
 
 		await adb_collection_init( liwe.db, COLL_USER_2FAS, [
@@ -2452,13 +2498,12 @@ export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boole
 
 		// Create system users
 		await Promise.all( _liwe.cfg.user.users.map( async ( u: any ) => {
-			u.password = sha512( u.password );
-			u.id = mkid( 'user' );
-			delete u.u_id;
 			const ck = await adb_query_one( liwe.db, `FOR u IN ${ COLL_USERS } FILTER u.email == @email RETURN u.id`, { email: u.email } );
 			if ( ck ) return true;
 
-			return adb_record_add( liwe.db, COLL_USERS, u );
+			const err = { message: '' };
+
+			return await _create_user( { db: liwe.db, cfg: liwe.cfg } as ILRequest, err, u );
 		} ) );
 
 		return cback ? cback( null, _liwe.db ) : resolve( _liwe.db );

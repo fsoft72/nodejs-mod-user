@@ -18,8 +18,9 @@ import {
 	patch_user_set_billing, patch_user_set_bio, patch_user_update, post_user_2fa_verify, post_user_admin_add,
 	post_user_admin_change_password, post_user_admin_relogin, post_user_anonymous, post_user_avatar, post_user_del_app,
 	post_user_facerec_add, post_user_info_add, post_user_login, post_user_login_2fa, post_user_login_metamask,
-	post_user_login_remote, post_user_password_forgot, post_user_password_forgot_app, post_user_password_reset, post_user_perms_set,
-	post_user_register, post_user_register_app, post_user_tag, post_user_token, post_user_upload2face,
+	post_user_login_refresh, post_user_login_remote, post_user_password_forgot, post_user_password_forgot_app, post_user_password_reset,
+	post_user_perms_set, post_user_register, post_user_register_app, post_user_tag, post_user_token,
+	post_user_upload2face,
 	// functions
 	user_db_init, user_facerec_get, user_get_by_group, user_session_create, user_session_del,
 	user_session_get, users_list,
@@ -733,6 +734,20 @@ export const init = ( liwe: ILiWE ) => {
 			if ( err ) return send_error( res, err );
 
 			send_ok( res, { domains } );
+		} );
+	} );
+
+	app.post ( '/api/user/login/refresh', ( req: ILRequest, res: ILResponse ) => {
+		const { token, ___errors } = typed_dict( req.body, [
+			{ name: "token", type: "string", required: true }
+		] );
+
+		if ( ___errors.length ) return send_error ( res, { message: `Parameters error: ${___errors.join ( ', ' )}` } );
+
+		post_user_login_refresh ( req, token, ( err: ILError, __plain__: UserSessionData ) => {
+			if ( err ) return send_error( res, err );
+
+			send_ok( res, { ...__plain__ } );
 		} );
 	} );
 
