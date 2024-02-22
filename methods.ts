@@ -158,6 +158,7 @@ export const middleware_init = ( liwe: ILiWE ) => {
 					req.user = user;
 					req.session = data;
 				} catch ( e ) {
+					return res.status( 401 ).send( JSON.stringify( { error: { message: "Invalid token", code: 401 } } ) );
 					req.user = null;
 					req.session = null;
 				}
@@ -2401,7 +2402,7 @@ export const user_session_create = ( req: ILRequest, user: User, cback: LCback =
 
 		// We save the sess_id inside the token, not the session_key, because the key is
 		// calculated by `session_id()` call
-		const tok = jwt_crypt( sess_id, req.cfg.security.secret, req.cfg.security.token_expires );
+		const tok = jwt_crypt( sess_id, req.cfg.security.secret, parseInt( req.cfg.security.token_expires.toString(), 10 ) );
 
 		const data = {
 			user: {
