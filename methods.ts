@@ -159,8 +159,6 @@ export const middleware_init = ( liwe: ILiWE ) => {
 					req.session = data;
 				} catch ( e ) {
 					return res.status( 401 ).send( JSON.stringify( { error: { message: "Invalid token", code: 401 } } ) );
-					req.user = null;
-					req.session = null;
 				}
 			} else {
 				req.user = null;
