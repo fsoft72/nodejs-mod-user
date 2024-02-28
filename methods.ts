@@ -152,6 +152,14 @@ export const middleware_init = ( liwe: ILiWE ) => {
 			if ( _split.length > 1 ) {
 				const _tok = _split[ 1 ].trim();
 
+				// handle 'undefined' token
+				if ( _tok.toLowerCase() == "undefined" ) {
+					req.user = null;
+					req.session = null;
+					next();
+					return;
+				}
+
 				try {
 					const data: any = await user_session_get( req, _tok );
 					const user = { ...data.user };
@@ -307,12 +315,12 @@ const _is_group_admin = ( req: ILRequest ) => {
 	// get the user perms
 	const perms = req.user?.perms;
 
-	if ( !perms[ 'user' ] ) return false;
+	// if ( !perms[ 'user' ] ) return false;
 
 	// if the user has no group, he/she is not an admin
 	if ( !req.user?.group ) return false;
 
-	if ( perms[ 'user' ].indexOf( 'group_owner' ) != -1 ) return true;
+	if ( perms.indexOf( 'user.group_admin' ) != -1 ) return true;
 
 	return false;
 };
@@ -450,6 +458,25 @@ const _update_user_domain = async ( req: ILRequest, domain: SystemDomain ) => {
 
 	// update the user
 	await adb_record_add( req.db, COLL_USERS, user );
+};
+
+const _user_perms_convert = async ( req: ILRequest, user: User ) => {
+	if ( !user.perms ) return user;
+
+	if ( user.perms.length ) return user;
+
+	const new_perms: string[] = [];
+
+	for ( const [ mod, perms ] of Object.entries( user.perms ) ) {
+		( perms as any ).forEach( ( p: string ) => {
+			new_perms.push( `${ mod }.${ p }` );
+		} );
+	}
+
+	user.perms = new_perms;
+	await adb_record_add( req.db, COLL_USERS, user );
+
+	return user;
 };
 /*=== f2c_end __file_header ===*/
 
@@ -1060,7 +1087,6 @@ export const post_user_login = ( req: ILRequest, password: string, email?: strin
 
 		if ( !user ) user = await user_get( undefined, undefined, undefined, undefined, username || email );
 
-
 		if ( !user ) {
 			err.message = _( 'User not found' );
 			console.error( "User not found: ", email, password );
@@ -1071,7 +1097,6 @@ export const post_user_login = ( req: ILRequest, password: string, email?: strin
 		const rc = await _recaptcha_check( req, recaptcha, err );
 		if ( !rc ) return cback ? cback( err ) : reject( err );
 
-
 		if ( user.enabled === false ) {
 			err.message = _( 'User not enabled' );
 			console.error( "User not enabled: ", email );
@@ -1081,6 +1106,9 @@ export const post_user_login = ( req: ILRequest, password: string, email?: strin
 
 		if ( !_password_check( req, password, user, err, email ) )
 			return cback ? cback( err ) : reject( err );
+
+		// call the converter for user permissions
+		user = await _user_perms_convert( req, user );
 
 
 		const resp: UserSessionData = await _create_user_session( req, user, '', '', err );
@@ -1284,20 +1312,7 @@ export const post_user_perms_set = ( req: ILRequest, id_user: string, perms: Use
 
 		if ( !user ) return cback ? cback( err ) : reject( err );
 
-		// filter the incoming perms, so that perms values do not contain the module name
-		const res: Record<string, string[]> = {};
-		for ( const [ mod, p ] of Object.entries( perms ) ) {
-			res[ mod ] = [];
-			p.forEach( ( v: string ) => {
-				const vals = v.split( '.' );
-
-				if ( vals.length === 1 ) return res[ mod ].push( v );
-
-				return res[ mod ].push( vals[ 1 ] );
-			} );
-		}
-
-		user.perms = res;  // perms as any;
+		user.perms = perms;  // perms as any;
 		await adb_record_add( req.db, COLL_USERS, user );
 
 		await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'perms', user } );
