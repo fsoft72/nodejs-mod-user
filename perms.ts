@@ -12,6 +12,7 @@ const permissions = {
 	"user.password": "Can change a user password",
 	"user.group_owner": "The user is the master of a Group",
 	"user.change_identity": "Can login as another user",
+	"user.domain": "Can change user's domain",
 };
 
 export default permissions;

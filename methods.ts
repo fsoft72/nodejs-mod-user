@@ -512,6 +512,8 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
 		u = await user_get( null, null, null, false, username );
 		if ( u ) return cback ? cback( err ) : reject( err );
 
+		console.log( "=== USER ADMIN ADD: ", { email, password, username, name, lastname, perms, enabled, language, group } );
+
 		if ( !_valid_password( password, err, req.cfg ) )
 			return cback ? cback( err ) : reject( err );
 
@@ -520,7 +522,7 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
 		u = await _create_user( req, err, {
 			domain: domain.code,
 			email,
-			password: sha512( password ),
+			password,
 			name,
 			lastname,
 			enabled,
@@ -2310,6 +2312,43 @@ export const post_user_login_refresh = ( req: ILRequest, token: string, cback: L
 
 		return cback ? cback( null, resp ) : resolve( resp );
 		/*=== f2c_end post_user_login_refresh ===*/
+	} );
+};
+// }}}
+
+// {{{ post_user_domain_set ( req: ILRequest, id: string, code: string, cback: LCBack = null ): Promise<User>
+/**
+ *
+ * This method allows the user to set a new domain for the provided user
+ *
+ * @param id - The user id [req]
+ * @param code - The domain code to set [req]
+ *
+ * @return user: User
+ *
+ */
+export const post_user_domain_set = ( req: ILRequest, id: string, code: string, cback: LCback = null ): Promise<User> => {
+	return new Promise( async ( resolve, reject ) => {
+		/*=== f2c_start post_user_domain_set ===*/
+		const err = { message: _( 'User not found' ) };
+		const user: User = await user_get( id );
+
+		if ( !user ) return cback ? cback( err ) : reject( err );
+
+		const domain: SystemDomain = await domain_get( null, code );
+
+		if ( !domain ) {
+			err.message = _( 'Domain not found' );
+			return cback ? cback( err ) : reject( err );
+		}
+
+		user.domain = domain.code;
+
+		// delete the id_user / id_domain from user_domains if exists
+		await adb_record_add( req.db, COLL_USER_DOMAINS, user, UserKeys );
+
+		return cback ? cback( null, user ) : resolve( user );
+		/*=== f2c_end post_user_domain_set ===*/
 	} );
 };
 // }}}
