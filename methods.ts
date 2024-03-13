@@ -64,7 +64,7 @@ export const user_get = async ( id?: string, email?: string, wallet?: string, fa
 	if ( email ) email = email.trim().toLowerCase();
 	if ( username ) username = username.trim().toLowerCase();
 
-	const user: User = await adb_find_one( _liwe.db, COLL_USERS, { id, email, wallet, username, phone, refresh_token } );
+	let user: User = await adb_find_one( _liwe.db, COLL_USERS, { id, email, wallet, username, phone, refresh_token } );
 
 	if ( !user ) return null;
 
@@ -72,6 +72,8 @@ export const user_get = async ( id?: string, email?: string, wallet?: string, fa
 
 	if ( typeof user.extra === 'string' )
 		user.extra = JSON.parse( user.extra );
+
+	user = await _user_perms_convert( { db: _liwe.db } as ILRequest, user );
 
 	if ( facerec )
 		user.faces = await user_facerec_get( { db: _liwe.db } as ILRequest, user.id );
