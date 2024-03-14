@@ -1217,9 +1217,14 @@ export const get_user_admin_list = ( req: ILRequest, tag?: string, cback: LCback
 
 		if ( is_group_admin ) group = req.user.group;
 
-		const domain = req.session.domain_code;
+		const domain = await system_domain_get_by_session( req );
+		let domain_code = domain.code;
+
+		// if the user has the 'user.domain' permission, we can show all users
+		if ( perm_available( req.user, [ 'user.domain' ] ) ) domain_code = undefined;
+
 		const [ filters, values ] = adb_prepare_filters( "user", {
-			domain,
+			domain: domain_code,
 			group,
 			deleted: {
 				mode: 'null'
