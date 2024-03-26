@@ -2352,7 +2352,7 @@ export const post_user_domain_set = ( req: ILRequest, id: string, code: string, 
 		user.domain = domain.code;
 
 		// delete the id_user / id_domain from user_domains if exists
-		await adb_record_add( req.db, COLL_USER_DOMAINS, user, UserKeys );
+		await adb_record_add( req.db, COLL_USERS, user, UserKeys );
 
 		return cback ? cback( null, user ) : resolve( user );
 		/*=== f2c_end post_user_domain_set ===*/
