@@ -1155,7 +1155,7 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
 
 			// extract name and lastname from string
 			const [ name_, lastname ] = name.split( ' ' );
-			user = await _create_user( req, err, { email, name: name_, lastname, avatar }, { skipPasswordCheck: true } );
+			user = await _create_user( req, err, { email, name: name_, lastname, avatar, visible: true, enabled: true }, { skipPasswordCheck: true } );
 
 			if ( !user ) return cback ? cback( err ) : reject( err );
 		}
