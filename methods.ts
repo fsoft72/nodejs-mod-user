@@ -139,7 +139,7 @@ export const middleware_init = ( liwe: ILiWE ) => {
 				const _tok = _split[ 1 ].trim();
 
 				// handle 'undefined' token
-				if ( _tok.toLowerCase() == "undefined" ) {
+				if ( _tok.toLowerCase() == "undefined" || _tok.toLowerCase() == "null" || _tok.length < 5 ) {
 					req.user = null;
 					req.session = null;
 					next();
