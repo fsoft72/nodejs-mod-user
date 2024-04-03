@@ -87,29 +87,13 @@ export const users_get = async ( req: ILRequest, user_ids: string[] ): Promise<U
 	return users;
 };
 
-/*
-const user_create = async ( req: ILRequest, email: string, password: string, name: string, lastname: string, enabled: boolean, language: string ) => {
-	const domain = await system_domain_get_by_session( req );
-
-	return {
-		id: mk__id( 'user' ),
-		domain: domain.code,
-		username: sha512( email ),
-		email,
-		password: sha512( password ),
-		name,
-		lastname,
-		enabled,
-		language,
-		refresh_token: mkid( 'tok' ),
-	};
-};
-*/
 
 const _valid_password = ( pwd: string, err: any, cfg: ILiweConfig ) => {
 	if ( !cfg.user.password ) return true;
 
 	if ( !cfg.user.password.enforce ) return true;
+
+	if ( !pwd ) pwd = '';
 
 	if ( pwd.length < cfg.user.password.min_len ) {
 		err.message = _( "Password should be at least {{ cfg.user.password.min_len }} chars long", { cfg } );
@@ -343,7 +327,11 @@ interface CreateUserData {
 	perms?: string[];
 }
 
-const _create_user = async ( req: ILRequest, err: ILError, params: CreateUserData ): Promise<User | null> => {
+interface CreateUserOpts {
+	skipPasswordCheck?: boolean;
+}
+
+const _create_user = async ( req: ILRequest, err: ILError, params: CreateUserData, opts?: CreateUserOpts ): Promise<User | null> => {
 	let { username, email, phone, name, lastname, password, group, enabled = false, visible = false, avatar = '', language = 'it', domain = '', perms = [] } = params;
 
 	if ( !domain ) {
@@ -402,9 +390,11 @@ const _create_user = async ( req: ILRequest, err: ILError, params: CreateUserDat
 		return null;
 	}
 
-	if ( !_valid_password( password, err, req.cfg ) ) {
-		error( "password for user %s not valid: %s", email, password );
-		return null;
+	if ( opts?.skipPasswordCheck !== true ) {
+		if ( !_valid_password( password, err, req.cfg ) ) {
+			error( "password for user %s not valid: %s", email, password );
+			return null;
+		}
 	}
 
 	const usr = await adb_record_add( req.db, COLL_USERS, dct );
@@ -1165,26 +1155,9 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
 
 			// extract name and lastname from string
 			const [ name_, lastname ] = name.split( ' ' );
-			user = await _create_user( req, err, { email, name: name_, lastname, avatar } );
+			user = await _create_user( req, err, { email, name: name_, lastname, avatar }, { skipPasswordCheck: true } );
 
 			if ( !user ) return cback ? cback( err ) : reject( err );
-			/*
-			user = {
-				id: mk__id( 'user' ),
-				domain: domain.code,
-				username: email,
-				email,
-				password: sha512( mkid( 'temp' ) ),
-				name: name_,
-				lastname,
-				enabled: true,
-				language: 'en',
-				avatar
-			};
-			user = await adb_record_add( req.db, COLL_USERS, user, UserKeys );
-
-			await liwe_event_emit( req, USER_EVENT_CREATE, user );
-			*/
 		}
 
 		// If the user exists we create a valid session and return
