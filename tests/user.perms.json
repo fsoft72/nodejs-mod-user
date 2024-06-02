@@ -172,7 +172,7 @@
 				"perms": {
 					"system": [],
 					"user": [
-						"user.create"
+						"create"
 					]
 				}
 			}

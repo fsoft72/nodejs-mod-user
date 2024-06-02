@@ -992,7 +992,7 @@ export const post_user_tag = ( req: ILRequest, id_user: string, tags: string[], 
 		/*=== f2c_start post_user_tag ===*/
 		let user = await user_get( id_user );
 
-		user = await tag_obj( req, tags, id_user, 'user' ) as any;
+		user = await tag_obj( req, tags, user, 'user' ) as any;
 
 		user = await adb_record_add( _liwe.db, COLL_USERS, user );
 
