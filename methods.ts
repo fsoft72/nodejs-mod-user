@@ -44,7 +44,7 @@ import { perm_available } from '../../liwe/auth';
 import { adb_collection_init, adb_del_one, adb_find_all, adb_find_one, adb_prepare_filters, adb_query_all, adb_query_one, adb_record_add } from '../../liwe/db/arango';
 import { error } from '../../liwe/console_colors';
 import { liwe_event_emit } from '../../liwe/events';
-import { USER_EVENT_2FA, USER_EVENT_CREATE, USER_EVENT_DELETE, USER_EVENT_DOMAIN, USER_EVENT_UPDATE } from './events';
+import { USER_EVENT_2FA, USER_EVENT_CREATE, USER_EVENT_DELETE, USER_EVENT_DOMAIN, USER_EVENT_LOGIN, USER_EVENT_LOGOUT, USER_EVENT_UPDATE } from './events';
 
 const twofactor = require( "node-2fa" );
 
@@ -1108,6 +1108,8 @@ export const post_user_login = ( req: ILRequest, password: string, email?: strin
 		const resp: UserSessionData = await _create_user_session( req, user, '', '', err );
 		if ( err.message ) return cback ? cback( err ) : reject( err );
 
+		await liwe_event_emit( req, USER_EVENT_LOGIN, { mode: 'login', user } );
+
 		return cback ? cback( null, resp ) : resolve( resp );
 		/*=== f2c_end post_user_login ===*/
 	} );
@@ -1162,6 +1164,9 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
 
 		// If the user exists we create a valid session and return
 		const resp: UserSessionData = await _create_user_session( req, user, '', '', null );
+
+		await liwe_event_emit( req, USER_EVENT_LOGIN, { mode: 'login', info: 'remote', user } );
+
 		return cback ? cback( null, resp ) : resolve( resp );
 		/*=== f2c_end post_user_login_remote ===*/
 	} );
@@ -1239,6 +1244,8 @@ export const get_user_logout = ( req: ILRequest, cback: LCback = null ): Promise
 		// when the user logs out, we set a fake refresh token
 		u.refresh_token = mkid( '---' );
 		await adb_record_add( req.db, COLL_USERS, u );
+
+		await liwe_event_emit( req, USER_EVENT_LOGOUT, { mode: 'logout', user: u } );
 
 		return cback ? cback( null, true ) : resolve( true as any );
 		/*=== f2c_end get_user_logout ===*/

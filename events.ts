@@ -12,3 +12,12 @@ export const USER_EVENT_2FA = 'user.2fa';
 
 // a user has changed the domain (user)
 export const USER_EVENT_DOMAIN = 'user.domain';
+
+// an user logged in (user)
+export const USER_EVENT_LOGIN = 'user.login';
+
+// an user logged out (user)
+export const USER_EVENT_LOGOUT = 'user.logout';
+
+// an user tried to login (user)
+export const USER_EVENT_LOGIN_TRY = 'user.login_error';
