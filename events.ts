@@ -4,6 +4,9 @@ export const USER_EVENT_CREATE = 'user.create';
 // a user has been updated  (mode, user)
 export const USER_EVENT_UPDATE = 'user.update';
 
+// this event is triggered before a user is deleted (user)
+export const USER_EVENT_PRE_DELETE = 'user.pre_delete';
+
 // a user has been removed (user)
 export const USER_EVENT_DELETE = 'user.delete';
 

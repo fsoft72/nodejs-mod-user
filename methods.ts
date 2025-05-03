@@ -43,8 +43,8 @@ import { Address } from '../address/types';
 import { perm_available } from '../../liwe/auth';
 import { adb_collection_init, adb_del_one, adb_find_all, adb_find_one, adb_prepare_filters, adb_query_all, adb_query_one, adb_record_add } from '../../liwe/db/arango';
 import { error } from '../../liwe/console_colors';
-import { liwe_event_emit } from '../../liwe/events';
-import { USER_EVENT_2FA, USER_EVENT_CREATE, USER_EVENT_DELETE, USER_EVENT_DOMAIN, USER_EVENT_LOGIN, USER_EVENT_LOGOUT, USER_EVENT_UPDATE } from './events';
+import { liwe_event_emit, LiWEEventResponse } from '../../liwe/events';
+import { USER_EVENT_2FA, USER_EVENT_CREATE, USER_EVENT_DELETE, USER_EVENT_DOMAIN, USER_EVENT_LOGIN, USER_EVENT_LOGOUT, USER_EVENT_PRE_DELETE, USER_EVENT_UPDATE } from './events';
 
 const twofactor = require( "node-2fa" );
 
@@ -610,6 +610,18 @@ export const delete_user_admin_del = ( req: ILRequest, id_user: string, cback: L
 		const err = { message: _( 'User not found' ) };
 
 		if ( !u ) return cback ? cback( err ) : reject( err );
+
+		// Before deleting the user, we emit the pre-delete event
+		// if resp contains any response with the `error` property, we stop the deletion
+		const resp: LiWEEventResponse = await liwe_event_emit( req, USER_EVENT_PRE_DELETE, u );
+		if ( resp && resp.length ) {
+			for ( let i = 0; i < resp.length; i++ ) {
+				if ( resp[ i ].error ) {
+					err.message = _( resp[ i ].error.message );
+					return cback ? cback( err ) : reject( err );
+				}
+			}
+		}
 
 		const d = new Date().toISOString().split( "T" )[ 0 ];
 
@@ -1976,6 +1988,18 @@ export const post_user_del_app = ( req: ILRequest, id_user: string, username: st
 			err.message = _( 'Invalid username' );
 			add_suspicious_activity( req, req.res, `Tried to delete a user with wrong username: OK ${ user.username } / Provided ${ username }` );
 			return cback ? cback( err ) : reject( err );
+		}
+
+		// Before deleting the user, we emit the pre-delete event
+		// if resp contains any response with the `error` property, we stop the deletion
+		const resp: LiWEEventResponse = await liwe_event_emit( req, USER_EVENT_PRE_DELETE, user );
+		if ( resp && resp.length ) {
+			for ( let i = 0; i < resp.length; i++ ) {
+				if ( resp[ i ].error ) {
+					err.message = _( resp[ i ].error.message );
+					return cback ? cback( err ) : reject( err );
+				}
+			}
 		}
 
 		await get_user_logout( req );
