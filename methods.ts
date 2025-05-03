@@ -1963,10 +1963,10 @@ export const post_user_del_app = ( req: ILRequest, id_user: string, username: st
 	return new Promise( async ( resolve, reject ) => {
 		/*=== f2c_start post_user_del_app ===*/
 		const challenge_fields = [ id_user, username ];
-		const check_challenge = challenge_create( challenge_fields, true );
 		const err = { message: _( 'Invalid challenge' ) };
 
-		if ( check_challenge != challenge ) {
+		if ( challenge_check( challenge, challenge_fields ) == false ) {
+			const check_challenge = challenge_create( challenge_fields, true );
 			add_suspicious_activity( req, req.res, `Tried to delete a user with wrong challenge: OK ${ check_challenge } / Provided ${ challenge }` );
 			return cback ? cback( err ) : reject( err );
 		}
