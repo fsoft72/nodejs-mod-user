@@ -975,7 +975,7 @@ export const get_user_register_activate = ( req: ILRequest, code: string, cback:
 		if ( !u ) return cback ? cback( err ) : reject( err );
 
 		u.enabled = true;
-		// u.visible = true;
+		( u as any ).visible = true;
 		u.code = null;
 
 		await adb_record_add( _liwe.db, COLL_USERS, u );
