@@ -33,11 +33,11 @@ import { mkid, challenge_check, challenge_create, isValidEmail, jwt_crypt, jwt_d
 import { tag_obj } from '../tag/methods';
 import { add_suspicious_activity } from '../../liwe/defender';
 import { send_mail_template } from '../../liwe/mail';
-import { server_fullpath, upload_fullpath } from '../../liwe/liwe';
+import { server_fullpath } from '../../liwe/liwe';
 import { domain_get } from '../system/methods';
 
-import { SystemDomain, SystemDomainPublic } from '../system/types';
-import { system_domain_get_by_code, system_domain_get_by_session } from '../system/methods';
+import { SystemDomain } from '../system/types';
+import { system_domain_get_by_session } from '../system/methods';
 import { session_create, session_del, session_get, session_id, session_remove_all } from '../session/methods';
 import { address_add, address_user_list } from '../address/methods';
 import { Address } from '../address/types';
