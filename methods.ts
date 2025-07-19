@@ -4,6 +4,7 @@
  */
 
 import { ILRequest, ILResponse, LCback, ILiweConfig, ILError, ILiWE } from '../../liwe/types';
+import { LiWEResponse, responseError, responseSuccess } from '../../liwe/response';
 import { $l } from '../../liwe/locale';
 import { system_permissions_register } from '../system/methods';
 
@@ -74,9 +75,6 @@ export const user_get = async ( id?: string, email?: string, wallet?: string, fa
 		user.extra = JSON.parse( user.extra );
 
 	user = await _user_perms_convert( { db: _liwe.db } as ILRequest, user );
-
-	if ( facerec )
-		user.faces = await user_facerec_get( { db: _liwe.db } as ILRequest, user.id );
 
 	return user;
 };
@@ -254,8 +252,6 @@ const _create_user_session = async ( req: ILRequest, user: User, twoFANounce = '
 			// the user has 2FA and a code was provided
 			// we check the code
 			const res = twofactor.verifyToken( user2FA.twofactor, twoFACode );
-
-			console.log( "=== VERIFY: ", res, user2FA.twofactor, twoFACode );
 
 			if ( !res || res.delta < 0 || res.delta > 2 ) {
 				console.log( "ERR: invalid 2FA code" );
@@ -472,7 +468,7 @@ const _user_perms_convert = async ( req: ILRequest, user: User ) => {
 };
 /*=== f2c_end __file_header ===*/
 
-// {{{ post_user_admin_add ( req: ILRequest, email: string, password: string, username: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, group?: string, cback: LCBack = null ): Promise<User>
+// {{{ post_user_admin_add ( req: ILRequest, email: string, password: string, username: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, group?: stringcback: LCBack = null ): Promise<User>
 /**
  *
  * This endpoint creates a valid user in the system, bypassing registration and verification phases.
@@ -490,51 +486,47 @@ const _user_perms_convert = async ( req: ILRequest, user: User ) => {
  * @return user: User
  *
  */
-export const post_user_admin_add = ( req: ILRequest, email: string, password: string, username: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, group?: string, cback: LCback = null ): Promise<User> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_admin_add ===*/
-		const domain: SystemDomain = await system_domain_get_by_session( req );
+export const post_user_admin_add = async ( req: ILRequest, email: string, password: string, username: string, name?: string, lastname?: string, perms?: string[], enabled?: boolean, language?: string, group?: string ): Promise<LiWEResponse<User>> => {
+	/*=== f2c_start post_user_admin_add ===*/
+	const domain: SystemDomain = await system_domain_get_by_session( req );
 
-		email = email.toLowerCase();
+	email = email.toLowerCase();
 
-		let u: User = await user_get( null, email );
-		const err = { message: _( 'User already exists in the system' ) };
-		if ( u ) return cback ? cback( err ) : reject( err );
+	let u: User = await user_get( null, email );
+	const err = { message: _( 'User already exists in the system' ) };
+	if ( u ) return responseError( err.message );
 
-		u = await user_get( null, null, null, false, username );
-		if ( u ) return cback ? cback( err ) : reject( err );
+	u = await user_get( null, null, null, false, username );
+	if ( u ) return responseError( err.message );
 
-		console.log( "=== USER ADMIN ADD: ", { email, password, username, name, lastname, perms, enabled, language, group } );
+	if ( !_valid_password( password, err, req.cfg ) )
+		return responseError( err.message );
 
-		if ( !_valid_password( password, err, req.cfg ) )
-			return cback ? cback( err ) : reject( err );
+	if ( !group ) group = '';
 
-		if ( !group ) group = '';
-
-		u = await _create_user( req, err, {
-			domain: domain.code,
-			email,
-			password,
-			name,
-			lastname,
-			enabled,
-			language,
-			username,
-			perms,
-			group
-		} );
-
-		if ( !u ) return cback ? cback( err ) : reject( err );
-
-		keys_filter( u, UserKeys );
-
-		return cback ? cback( null, u ) : resolve( u );
-		/*=== f2c_end post_user_admin_add ===*/
+	u = await _create_user( req, err, {
+		domain: domain.code,
+		email,
+		password,
+		name,
+		lastname,
+		enabled,
+		language,
+		username,
+		perms,
+		group
 	} );
+
+	if ( !u ) return responseError( err.message );
+
+	keys_filter( u, UserKeys );
+
+	return responseSuccess( u );
+	/*=== f2c_end post_user_admin_add ===*/
 };
 // }}}
 
-// {{{ patch_user_admin_update ( req: ILRequest, id: string, email?: string, password?: string, name?: string, lastname?: string, enabled?: boolean, level?: number, language?: string, cback: LCBack = null ): Promise<User>
+// {{{ patch_user_admin_update ( req: ILRequest, id: string, email?: string, password?: string, name?: string, lastname?: string, enabled?: boolean, level?: number, language?: stringcback: LCBack = null ): Promise<User>
 /**
  *
  * @param id - The user id to be changed [req]
@@ -549,51 +541,49 @@ export const post_user_admin_add = ( req: ILRequest, email: string, password: st
  * @return user: User
  *
  */
-export const patch_user_admin_update = ( req: ILRequest, id: string, email?: string, password?: string, name?: string, lastname?: string, enabled?: boolean, level?: number, language?: string, cback: LCback = null ): Promise<User> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start patch_user_admin_update ===*/
-		let u: User = await user_get( id );
-		const err = { message: _( 'User not found' ) };
-		if ( !u ) return cback ? cback( err ) : reject( err );
+export const patch_user_admin_update = async ( req: ILRequest, id: string, email?: string, password?: string, name?: string, lastname?: string, enabled?: boolean, level?: number, language?: string ): Promise<LiWEResponse<User>> => {
+	/*=== f2c_start patch_user_admin_update ===*/
+	let u: User = await user_get( id );
+	const err = { message: _( 'User not found' ) };
+	if ( !u ) return responseError( err.message );
 
-		if ( email && u.email != email ) {
-			const nu: User = await user_get( null, email );
-			if ( nu ) {
-				err.message = _( 'You cannot use this email address' );
-				add_suspicious_activity( req, req.res, `Trying to use an already used email: ${ email }` );
-				return cback ? cback( err ) : reject( err );
-			}
-
-			u.email = email;
+	if ( email && u.email != email ) {
+		const nu: User = await user_get( null, email );
+		if ( nu ) {
+			err.message = _( 'You cannot use this email address' );
+			add_suspicious_activity( req, req.res, `Trying to use an already used email: ${ email }` );
+			return responseError( err.message );
 		}
 
-		if ( password ) {
-			if ( !_valid_password( password, err, req.cfg ) ) {
-				console.error( "ERROR: password for user %s not valid: %s", u.email, password );
-				return cback ? cback( err ) : reject( err );
-			}
+		u.email = email;
+	}
 
-			u.password = sha512( password );
+	if ( password ) {
+		if ( !_valid_password( password, err, req.cfg ) ) {
+			console.error( "ERROR: password for user %s not valid: %s", u.email, password );
+			return responseError( err.message );
 		}
 
-		set_attr( u, "name", name );
-		set_attr( u, "lastname", lastname );
-		set_attr( u, "enabled", enabled );
-		set_attr( u, "level", level );
-		set_attr( u, "language", language );
+		u.password = sha512( password );
+	}
 
-		u.email = u.email.toLowerCase();
-		u = await adb_record_add( req.db, COLL_USERS, u, UserKeys );
+	set_attr( u, "name", name );
+	set_attr( u, "lastname", lastname );
+	set_attr( u, "enabled", enabled );
+	set_attr( u, "level", level );
+	set_attr( u, "language", language );
 
-		await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'admin.update', user: u } );
+	u.email = u.email.toLowerCase();
+	u = await adb_record_add( req.db, COLL_USERS, u, UserKeys );
 
-		return cback ? cback( null, u ) : resolve( u );
-		/*=== f2c_end patch_user_admin_update ===*/
-	} );
+	await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'admin.update', user: u } );
+
+	return responseSuccess( u );
+	/*=== f2c_end patch_user_admin_update ===*/
 };
 // }}}
 
-// {{{ delete_user_admin_del ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<string>
+// {{{ delete_user_admin_del ( req: ILRequest, id_user: stringcback: LCBack = null ): Promise<string>
 /**
  *
  * Deletes a user from the system
@@ -603,44 +593,42 @@ export const patch_user_admin_update = ( req: ILRequest, id: string, email?: str
  * @return id_user: string
  *
  */
-export const delete_user_admin_del = ( req: ILRequest, id_user: string, cback: LCback = null ): Promise<string> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start delete_user_admin_del ===*/
-		const u: User = await user_get( id_user );
-		const err = { message: _( 'User not found' ) };
+export const delete_user_admin_del = async ( req: ILRequest, id_user: string ): Promise<LiWEResponse<string>> => {
+	/*=== f2c_start delete_user_admin_del ===*/
+	const u: User = await user_get( id_user );
+	const err = { message: _( 'User not found' ) };
 
-		if ( !u ) return cback ? cback( err ) : reject( err );
+	if ( !u ) return responseError( err.message );
 
-		// Before deleting the user, we emit the pre-delete event
-		// if resp contains any response with the `error` property, we stop the deletion
-		const resp: LiWEEventResponse = await liwe_event_emit( req, USER_EVENT_PRE_DELETE, u );
-		if ( resp && resp.length ) {
-			for ( let i = 0; i < resp.length; i++ ) {
-				if ( resp[ i ].error ) {
-					err.message = _( resp[ i ].error.message );
-					return cback ? cback( err ) : reject( err );
-				}
+	// Before deleting the user, we emit the pre-delete event
+	// if resp contains any response with the `error` property, we stop the deletion
+	const resp: LiWEEventResponse = await liwe_event_emit( req, USER_EVENT_PRE_DELETE, u );
+	if ( resp && resp.length ) {
+		for ( let i = 0; i < resp.length; i++ ) {
+			if ( resp[ i ].error ) {
+				err.message = _( resp[ i ].error.message );
+				return responseError( err.message );
 			}
 		}
+	}
 
-		const d = new Date().toISOString().split( "T" )[ 0 ];
+	const d = new Date().toISOString().split( "T" )[ 0 ];
 
-		u.email = `${ u.email }-${ d }`;
-		u.username = `${ u.username }-${ d }`;
-		u.enabled = false;
-		u.deleted = new Date();
+	u.email = `${ u.email }-${ d }`;
+	u.username = `${ u.username }-${ d }`;
+	u.enabled = false;
+	u.deleted = new Date();
 
-		await adb_record_add( req.db, COLL_USERS, u );
+	await adb_record_add( req.db, COLL_USERS, u );
 
-		await liwe_event_emit( req, USER_EVENT_DELETE, u );
+	await liwe_event_emit( req, USER_EVENT_DELETE, u );
 
-		return cback ? cback( null, id_user ) : resolve( id_user );
-		/*=== f2c_end delete_user_admin_del ===*/
-	} );
+	return responseSuccess( id_user );
+	/*=== f2c_end delete_user_admin_del ===*/
 };
 // }}}
 
-// {{{ patch_user_admin_fields ( req: ILRequest, id: string, data: any, cback: LCBack = null ): Promise<User>
+// {{{ patch_user_admin_fields ( req: ILRequest, id: string, data: anycback: LCBack = null ): Promise<User>
 /**
  *
  * The call modifies a single field.
@@ -652,48 +640,46 @@ export const delete_user_admin_del = ( req: ILRequest, id_user: string, cback: L
  * @return user: User
  *
  */
-export const patch_user_admin_fields = ( req: ILRequest, id: string, data: any, cback: LCback = null ): Promise<User> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start patch_user_admin_fields ===*/
-		let u: User = await user_get( id );
-		const err = { message: _( 'User not found' ) };
+export const patch_user_admin_fields = async ( req: ILRequest, id: string, data: any ): Promise<LiWEResponse<User>> => {
+	/*=== f2c_start patch_user_admin_fields ===*/
+	let u: User = await user_get( id );
+	const err = { message: _( 'User not found' ) };
 
-		if ( !u ) return cback ? cback( err ) : reject( err );
+	if ( !u ) return responseError( err.message );
 
-		// perms cannot be changed using this function
-		delete data.perms;
+	// perms cannot be changed using this function
+	delete data.perms;
 
-		// if data contains email, check if it is unique
-		if ( data.email ) {
-			const u2: User = await user_get( undefined, data.email );
+	// if data contains email, check if it is unique
+	if ( data.email ) {
+		const u2: User = await user_get( undefined, data.email );
 
-			if ( u2 && u2.id !== u.id ) {
-				err.message = _( 'Email already in use' );
-				return cback ? cback( err ) : reject( err );
-			}
+		if ( u2 && u2.id !== u.id ) {
+			err.message = _( 'Email already in use' );
+			return responseError( err.message );
 		}
+	}
 
-		// if data contains username, check if it is unique
-		if ( data.username ) {
-			const u3: User = await user_get( undefined, undefined, undefined, undefined, data.username );
+	// if data contains username, check if it is unique
+	if ( data.username ) {
+		const u3: User = await user_get( undefined, undefined, undefined, undefined, data.username );
 
-			if ( u3 && u3.id !== u.id ) {
-				err.message = _( 'Username already in use' );
-				return cback ? cback( err ) : reject( err );
-			}
+		if ( u3 && u3.id !== u.id ) {
+			err.message = _( 'Username already in use' );
+			return responseError( err.message );
 		}
+	}
 
-		u = await adb_record_add( req.db, COLL_USERS, { ...u, ...data }, UserKeys );
+	u = await adb_record_add( req.db, COLL_USERS, { ...u, ...data }, UserKeys );
 
-		await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'admin.update', user: u } );
+	await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'admin.update', user: u } );
 
-		return cback ? cback( null, u ) : resolve( u );
-		/*=== f2c_end patch_user_admin_fields ===*/
-	} );
+	return responseSuccess( u );
+	/*=== f2c_end patch_user_admin_fields ===*/
 };
 // }}}
 
-// {{{ post_user_register ( req: ILRequest, email: string, password: string, recaptcha: string, name?: string, lastname?: string, phone?: string, username?: string, group?: string, cback: LCBack = null ): Promise<UserActivationCode>
+// {{{ post_user_register ( req: ILRequest, email: string, password: string, recaptcha: string, name?: string, lastname?: string, phone?: string, username?: string, group?: stringcback: LCBack = null ): Promise<UserActivationCode>
 /**
  *
  * Start the registration process of the user.
@@ -712,42 +698,40 @@ export const patch_user_admin_fields = ( req: ILRequest, id: string, data: any, 
  * @return uac: UserActivationCode
  *
  */
-export const post_user_register = ( req: ILRequest, email: string, password: string, recaptcha: string, name?: string, lastname?: string, phone?: string, username?: string, group?: string, cback: LCback = null ): Promise<UserActivationCode> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_register ===*/
-		const err = { message: _( 'Invalid parameters' ) };
+export const post_user_register = async ( req: ILRequest, email: string, password: string, recaptcha: string, name?: string, lastname?: string, phone?: string, username?: string, group?: string ): Promise<LiWEResponse<UserActivationCode>> => {
+	/*=== f2c_start post_user_register ===*/
+	const err = { message: _( 'Invalid parameters' ) };
 
-		const rc = await _recaptcha_check( req, recaptcha, err );
-		if ( !rc ) return cback ? cback( err ) : reject( err );
+	const rc = await _recaptcha_check( req, recaptcha, err );
+	if ( !rc ) return responseError( err.message );
 
-		const user: User = await _create_user(
-			req,
-			err,
-			{
-				username,
-				email,
-				phone,
-				name,
-				lastname,
-				password,
-				group,
-			}
-		);
+	const user: User = await _create_user(
+		req,
+		err,
+		{
+			username,
+			email,
+			phone,
+			name,
+			lastname,
+			password,
+			group,
+		}
+	);
 
-		if ( !user ) return cback ? cback( err ) : reject( err );
+	if ( !user ) return responseError( err.message );
 
-		_send_validation_code( req, user );
+	_send_validation_code( req, user );
 
-		// if cfg.debug is true, return the activation code
-		const code = req.cfg.debug?.enabled && req.cfg.debug?.send_code ? user.code : '';
+	// if cfg.debug is true, return the activation code
+	const code = req.cfg.debug?.enabled && req.cfg.debug?.send_code ? user.code : '';
 
-		return cback ? cback( null, code as any ) : resolve( code as any );
-		/*=== f2c_end post_user_register ===*/
-	} );
+	return responseSuccess( code as any );
+	/*=== f2c_end post_user_register ===*/
 };
 // }}}
 
-// {{{ patch_user_update ( req: ILRequest, email?: string, password?: string, name?: string, lastname?: string, username?: string, group?: string, phone?: string, cback: LCBack = null ): Promise<User>
+// {{{ patch_user_update ( req: ILRequest, email?: string, password?: string, name?: string, lastname?: string, username?: string, group?: string, phone?: stringcback: LCBack = null ): Promise<User>
 /**
  *
  * Updates user data.
@@ -766,49 +750,47 @@ export const post_user_register = ( req: ILRequest, email: string, password: str
  * @return user: User
  *
  */
-export const patch_user_update = ( req: ILRequest, email?: string, password?: string, name?: string, lastname?: string, username?: string, group?: string, phone?: string, cback: LCback = null ): Promise<User> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start patch_user_update ===*/
-		let u = await user_get( req.user.id );
-		const err = { message: _( 'User not found' ) };
+export const patch_user_update = async ( req: ILRequest, email?: string, password?: string, name?: string, lastname?: string, username?: string, group?: string, phone?: string ): Promise<LiWEResponse<User>> => {
+	/*=== f2c_start patch_user_update ===*/
+	let u = await user_get( req.user.id );
+	const err = { message: _( 'User not found' ) };
 
-		if ( !u ) {
-			return cback ? cback( err ) : reject( err );
+	if ( !u ) {
+		return responseError( err.message );
+	}
+
+	// if email is provided, check if it is unique
+	if ( email ) {
+		const u2: User = await user_get( undefined, email );
+		if ( u2 && u2.id !== u.id ) {
+			err.message = _( 'Email already in use' );
+			return responseError( err.message );
 		}
+	}
 
-		// if email is provided, check if it is unique
-		if ( email ) {
-			const u2: User = await user_get( undefined, email );
-			if ( u2 && u2.id !== u.id ) {
-				err.message = _( 'Email already in use' );
-				return cback ? cback( err ) : reject( err );
-			}
+	// if username is provided, check if it is unique
+	if ( username ) {
+		const u3: User = await user_get( undefined, undefined, undefined, undefined, username );
+		if ( u3 && u3.id !== u.id ) {
+			err.message = _( 'Username already in use' );
+			return responseError( err.message );
 		}
+	}
 
-		// if username is provided, check if it is unique
-		if ( username ) {
-			const u3: User = await user_get( undefined, undefined, undefined, undefined, username );
-			if ( u3 && u3.id !== u.id ) {
-				err.message = _( 'Username already in use' );
-				return cback ? cback( err ) : reject( err );
-			}
-		}
+	// if we get here, all unique fields are ok
 
-		// if we get here, all unique fields are ok
+	u = { ...u, ...keys_valid( { email, password, name, lastname, username, group, phone } ) };
 
-		u = { ...u, ...keys_valid( { email, password, name, lastname, username, group, phone } ) };
+	u = await adb_record_add( req.db, COLL_USERS, u, UserKeys );
 
-		u = await adb_record_add( req.db, COLL_USERS, u, UserKeys );
+	await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'update', user: u } );
 
-		await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'update', user: u } );
-
-		return cback ? cback( null, u ) : resolve( u );
-		/*=== f2c_end patch_user_update ===*/
-	} );
+	return responseSuccess( u );
+	/*=== f2c_end patch_user_update ===*/
 };
 // }}}
 
-// {{{ post_user_avatar ( req: ILRequest, avatar: File, cback: LCBack = null ): Promise<User>
+// {{{ post_user_avatar ( req: ILRequest, avatar: Filecback: LCBack = null ): Promise<User>
 /**
  *
  * Uploads a user avatar.
@@ -819,56 +801,25 @@ export const patch_user_update = ( req: ILRequest, email?: string, password?: st
  * @return user: User
  *
  */
-export const post_user_avatar = ( req: ILRequest, avatar: File, cback: LCback = null ): Promise<User> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_avatar ===*/
-		// FIXME: rewrite using media manager
+export const post_user_avatar = async ( req: ILRequest, avatar: File ): Promise<LiWEResponse<User>> => {
+	/*=== f2c_start post_user_avatar ===*/
+	// FIXME: rewrite using media manager
 
-		// const u: Upload = await upload_add_file_name( req, 'avatar', 'user', req.user.id, 'avatars', null, true );
-		let user: User = await user_get( req.user.id );
+	// const u: Upload = await upload_add_file_name( req, 'avatar', 'user', req.user.id, 'avatars', null, true );
+	let user: User = await user_get( req.user.id );
 
-		// user.avatar = u.path;
+	// user.avatar = u.path;
 
-		user = await adb_record_add( req.db, COLL_USERS, user, UserKeys );
+	user = await adb_record_add( req.db, COLL_USERS, user, UserKeys );
 
-		await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'avatar', user } );
+	await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'avatar', user } );
 
-		return cback ? cback( null, user ) : resolve( user );
-		/*=== f2c_end post_user_avatar ===*/
-	} );
+	return responseSuccess( user );
+	/*=== f2c_end post_user_avatar ===*/
 };
 // }}}
 
-// {{{ post_user_facerec_add ( req: ILRequest, face: File, cback: LCBack = null ): Promise<UserFaceRec>
-/**
- *
- * Uploads a user face for face recognition.
- * Only the user can update him/her self.
- *
- * @param face - the user face photo [req]
- *
- * @return facerec: UserFaceRec
- *
- */
-export const post_user_facerec_add = ( req: ILRequest, face: File, cback: LCback = null ): Promise<UserFaceRec> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_facerec_add ===*/
-		// FIXME: rewrite using media manager
-
-		// const u: Upload = await upload_add_file_name( req, 'face', 'user', req.user.id, 'faces' );
-		const domain = await system_domain_get_by_session( req );
-
-		// let fr: UserFaceRec = { id: mk__id( 'face' ), domain: domain.code, id_user: req.user.id, id_upload: u.id, filename: u.filename };
-
-		// fr = await adb_record_add( req.db, COLL_USER_FACERECS, fr, UserFaceRecKeys );
-
-		// return cback ? cback( null, fr ) : resolve( fr );
-		/*=== f2c_end post_user_facerec_add ===*/
-	} );
-};
-// }}}
-
-// {{{ post_user_password_forgot ( req: ILRequest, email: string, recaptcha: string, cback: LCBack = null ): Promise<string>
+// {{{ post_user_password_forgot ( req: ILRequest, email: string, recaptcha: stringcback: LCBack = null ): Promise<string>
 /**
  *
  * Start the 'Password forgotten' process for the user.
@@ -881,41 +832,39 @@ export const post_user_facerec_add = ( req: ILRequest, face: File, cback: LCback
  * @return uac: string
  *
  */
-export const post_user_password_forgot = ( req: ILRequest, email: string, recaptcha: string, cback: LCback = null ): Promise<string> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_password_forgot ===*/
-		let user: User = await adb_query_one( req.db, `FOR u IN ${ COLL_USERS } FILTER u.email == @email RETURN u`, { email } );
-		const err = { message: _( 'User not found' ) };
+export const post_user_password_forgot = async ( req: ILRequest, email: string, recaptcha: string ): Promise<LiWEResponse<string>> => {
+	/*=== f2c_start post_user_password_forgot ===*/
+	let user: User = await adb_query_one( req.db, `FOR u IN ${ COLL_USERS } FILTER u.email == @email RETURN u`, { email } );
+	const err = { message: _( 'User not found' ) };
 
-		const rc = await _recaptcha_check( req, recaptcha, err );
-		if ( !rc ) return cback ? cback( err ) : reject( err );
+	const rc = await _recaptcha_check( req, recaptcha, err );
+	if ( !rc ) return responseError( err.message );
 
-		if ( !user ) {
-			add_suspicious_activity( req, req.res, "Password forgot with wrong email" );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( !user ) {
+		add_suspicious_activity( req, req.res, "Password forgot with wrong email" );
+		return responseError( err.message );
+	}
 
-		_user_code( req, user );
+	_user_code( req, user );
 
-		user = await adb_record_add( req.db, COLL_USERS, user );
+	user = await adb_record_add( req.db, COLL_USERS, user );
 
-		// NOTE: code is sent only if req.cfg.debug is enabled
-		const code = req.cfg.debug?.enabled && req.cfg.debug?.send_code ? user.code : '';
+	// NOTE: code is sent only if req.cfg.debug is enabled
+	const code = req.cfg.debug?.enabled && req.cfg.debug?.send_code ? user.code : '';
 
-		send_mail_template( _( "Password Forgot" ), server_fullpath( "../../etc/templates/user/password-reset.html" ),
-			{
-				code: user.code,
-				site_name: req.cfg.app.name,
-				site_base_url: req.cfg.server.public_url,
-			}, email, req.cfg.smtp.from, null, null );
+	send_mail_template( _( "Password Forgot" ), server_fullpath( "../../etc/templates/user/password-reset.html" ),
+		{
+			code: user.code,
+			site_name: req.cfg.app.name,
+			site_base_url: req.cfg.server.public_url,
+		}, email, req.cfg.smtp.from, null, null );
 
-		return cback ? cback( null, code ) : resolve( code );
-		/*=== f2c_end post_user_password_forgot ===*/
-	} );
+	return responseSuccess( code );
+	/*=== f2c_end post_user_password_forgot ===*/
 };
 // }}}
 
-// {{{ post_user_password_reset ( req: ILRequest, email: string, code: string, password: string, cback: LCBack = null ): Promise<boolean>
+// {{{ post_user_password_reset ( req: ILRequest, email: string, code: string, password: stringcback: LCBack = null ): Promise<boolean>
 /**
  *
  * Resets the user password.
@@ -927,37 +876,35 @@ export const post_user_password_forgot = ( req: ILRequest, email: string, recapt
  * @return ok: boolean
  *
  */
-export const post_user_password_reset = ( req: ILRequest, email: string, code: string, password: string, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_password_reset ===*/
-		const user = await adb_query_one( _liwe.db, `FOR u IN ${ COLL_USERS } FILTER u.email == @email RETURN u`, { email } );
-		const err = { message: _( 'User not found' ) };
-		if ( !user ) {
-			add_suspicious_activity( req, req.res, "Password reset request for unknown email address" );
-			return cback ? cback( err ) : reject( err );
-		}
+export const post_user_password_reset = async ( req: ILRequest, email: string, code: string, password: string ): Promise<LiWEResponse<boolean>> => {
+	/*=== f2c_start post_user_password_reset ===*/
+	const user = await adb_query_one( _liwe.db, `FOR u IN ${ COLL_USERS } FILTER u.email == @email RETURN u`, { email } );
+	const err = { message: _( 'User not found' ) };
+	if ( !user ) {
+		add_suspicious_activity( req, req.res, "Password reset request for unknown email address" );
+		return responseError( err.message );
+	}
 
-		err.message = "Wrong confirmation code";
-		if ( user.code != code ) {
-			add_suspicious_activity( req, req.res, "Password reset request with wrong code" );
-			return cback ? cback( err ) : reject( err );
-		}
+	err.message = "Wrong confirmation code";
+	if ( user.code != code ) {
+		add_suspicious_activity( req, req.res, "Password reset request with wrong code" );
+		return responseError( err.message );
+	}
 
-		user.password = sha512( password );
-		// we overwrite the code with a new random one
-		user.code = mkid( 'code' );
+	user.password = sha512( password );
+	// we overwrite the code with a new random one
+	user.code = mkid( 'code' );
 
-		await adb_record_add( _liwe.db, COLL_USERS, user );
+	await adb_record_add( _liwe.db, COLL_USERS, user );
 
-		await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'password', user } );
+	await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'password', user } );
 
-		return cback ? cback( null, true ) : resolve( true );
-		/*=== f2c_end post_user_password_reset ===*/
-	} );
+	return responseSuccess( true );
+	/*=== f2c_end post_user_password_reset ===*/
 };
 // }}}
 
-// {{{ get_user_register_activate ( req: ILRequest, code: string, cback: LCBack = null ): Promise<User>
+// {{{ get_user_register_activate ( req: ILRequest, code: stringcback: LCBack = null ): Promise<User>
 /**
  *
  * This is the activation request.
@@ -967,28 +914,26 @@ export const post_user_password_reset = ( req: ILRequest, email: string, code: s
  * @return user: User
  *
  */
-export const get_user_register_activate = ( req: ILRequest, code: string, cback: LCback = null ): Promise<User> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start get_user_register_activate ===*/
-		const u: User = await adb_query_one( _liwe.db, `FOR u IN ${ COLL_USERS } FILTER u.code == @code RETURN u`, { code } );
-		const err = { message: _( 'User not found' ) };
-		if ( !u ) return cback ? cback( err ) : reject( err );
+export const get_user_register_activate = async ( req: ILRequest, code: string ): Promise<LiWEResponse<User>> => {
+	/*=== f2c_start get_user_register_activate ===*/
+	const u: User = await adb_query_one( _liwe.db, `FOR u IN ${ COLL_USERS } FILTER u.code == @code RETURN u`, { code } );
+	const err = { message: _( 'User not found' ) };
+	if ( !u ) return responseError( err.message );
 
-		u.enabled = true;
-		( u as any ).visible = true;
-		u.code = null;
+	u.enabled = true;
+	( u as any ).visible = true;
+	u.code = null;
 
-		await adb_record_add( _liwe.db, COLL_USERS, u );
+	await adb_record_add( _liwe.db, COLL_USERS, u );
 
-		liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'activate', user: u } );
+	liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'activate', user: u } );
 
-		return cback ? cback( null, u ) : resolve( u );
-		/*=== f2c_end get_user_register_activate ===*/
-	} );
+	return responseSuccess( u );
+	/*=== f2c_end get_user_register_activate ===*/
 };
 // }}}
 
-// {{{ post_user_tag ( req: ILRequest, id_user: string, tags: string[], cback: LCBack = null ): Promise<User>
+// {{{ post_user_tag ( req: ILRequest, id_user: string, tags: string[]cback: LCBack = null ): Promise<User>
 /**
  *
  * This endpoint allows you to add tags to a user.
@@ -999,24 +944,22 @@ export const get_user_register_activate = ( req: ILRequest, code: string, cback:
  * @return user: User
  *
  */
-export const post_user_tag = ( req: ILRequest, id_user: string, tags: string[], cback: LCback = null ): Promise<User> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_tag ===*/
-		let user = await user_get( id_user );
+export const post_user_tag = async ( req: ILRequest, id_user: string, tags: string[] ): Promise<LiWEResponse<User>> => {
+	/*=== f2c_start post_user_tag ===*/
+	let user = await user_get( id_user );
 
-		user = await tag_obj( req, tags, user, 'user' ) as any;
+	user = await tag_obj( req, tags, user, 'user' ) as any;
 
-		user = await adb_record_add( _liwe.db, COLL_USERS, user );
+	user = await adb_record_add( _liwe.db, COLL_USERS, user );
 
-		await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'tag', user } );
+	await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'tag', user } );
 
-		return cback ? cback( null, user ) : resolve( user );
-		/*=== f2c_end post_user_tag ===*/
-	} );
+	return responseSuccess( user );
+	/*=== f2c_end post_user_tag ===*/
 };
 // }}}
 
-// {{{ post_user_token ( req: ILRequest, username: string, password: string, cback: LCBack = null ): Promise<UserSessionData>
+// {{{ post_user_token ( req: ILRequest, username: string, password: stringcback: LCBack = null ): Promise<UserSessionData>
 /**
  *
  * This endpoint implements the user authentication with the ``OAuth2`` protocol.
@@ -1028,34 +971,32 @@ export const post_user_tag = ( req: ILRequest, id_user: string, tags: string[], 
  * @return __plain__: UserSessionData
  *
  */
-export const post_user_token = ( req: ILRequest, username: string, password: string, cback: LCback = null ): Promise<UserSessionData> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_token ===*/
-		const [ filters, values ] = adb_prepare_filters( 'u', { email: username, password: sha512( password ), enabled: true } );
-		const u: User = await adb_query_one( _liwe.db, `FOR u IN ${ COLL_USERS } ${ filters } RETURN u`, values );
-		const err = { message: _( 'User not found' ) };
+export const post_user_token = async ( req: ILRequest, username: string, password: string ): Promise<LiWEResponse<UserSessionData>> => {
+	/*=== f2c_start post_user_token ===*/
+	const [ filters, values ] = adb_prepare_filters( 'u', { email: username, password: sha512( password ), enabled: true } );
+	const u: User = await adb_query_one( _liwe.db, `FOR u IN ${ COLL_USERS } ${ filters } RETURN u`, values );
+	const err = { message: _( 'User not found' ) };
 
-		if ( !u ) {
-			add_suspicious_activity( req, req.res, 'Token creation for not existent user' );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( !u ) {
+		add_suspicious_activity( req, req.res, 'Token creation for not existent user' );
+		return responseError( err.message );
+	}
 
-		const tok = await user_session_create( req, u );
+	const tok = await user_session_create( req, u );
 
-		const resp: UserSessionData = {
-			id: u.id,
-			access_token: tok,
-			refresh_token: u.refresh_token,
-			token_type: 'bearer',
-		};
+	const resp: UserSessionData = {
+		id: u.id,
+		access_token: tok,
+		refresh_token: u.refresh_token,
+		token_type: 'bearer',
+	};
 
-		return cback ? cback( null, resp ) : resolve( resp );
-		/*=== f2c_end post_user_token ===*/
-	} );
+	return responseSuccess( resp );
+	/*=== f2c_end post_user_token ===*/
 };
 // }}}
 
-// {{{ post_user_login ( req: ILRequest, password: string, email?: string, username?: string, recaptcha?: string, challenge?: string, cback: LCBack = null ): Promise<UserSessionData>
+// {{{ post_user_login ( req: ILRequest, password: string, email?: string, username?: string, recaptcha?: string, challenge?: stringcback: LCBack = null ): Promise<UserSessionData>
 /**
  *
  * This endpoint implements the user authentication with ``email`` or ``username`` and ``password`` field.
@@ -1072,63 +1013,60 @@ export const post_user_token = ( req: ILRequest, username: string, password: str
  * @return __plain__: UserSessionData
  *
  */
-export const post_user_login = ( req: ILRequest, password: string, email?: string, username?: string, recaptcha?: string, challenge?: string, cback: LCback = null ): Promise<UserSessionData> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_login ===*/
-		const err = { message: '' };
+export const post_user_login = async ( req: ILRequest, password: string, email?: string, username?: string, recaptcha?: string, challenge?: string ): Promise<LiWEResponse<UserSessionData>> => {
+	/*=== f2c_start post_user_login ===*/
+	const err = { message: '' };
 
-		if ( !username && !email ) {
-			add_suspicious_activity( req, req.res, 'Username and email not provided' );
-			err.message = _( 'Username or email not provided' );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( !username && !email ) {
+		add_suspicious_activity( req, req.res, 'Username and email not provided' );
+		err.message = _( 'Username or email not provided' );
+		return responseError( err.message );
+	}
 
-		if ( !recaptcha && !challenge ) {
-			add_suspicious_activity( req, req.res, 'Recaptcha or challenge not provided' );
-			err.message = _( 'Recaptcha or challenge not provided' );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( !recaptcha && !challenge ) {
+		add_suspicious_activity( req, req.res, 'Recaptcha or challenge not provided' );
+		err.message = _( 'Recaptcha or challenge not provided' );
+		return responseError( err.message );
+	}
 
-		let user: User = await user_get( undefined, email );
+	let user: User = await user_get( undefined, email );
 
-		if ( !user ) user = await user_get( undefined, undefined, undefined, undefined, username || email );
+	if ( !user ) user = await user_get( undefined, undefined, undefined, undefined, username || email );
 
-		if ( !user ) {
-			err.message = _( 'User not found' );
-			console.error( "User not found: ", email, password );
-			add_suspicious_activity( req, req.res, `User not found ${ email }` );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( !user ) {
+		err.message = _( 'User not found' );
+		console.error( "User not found: ", email, password );
+		add_suspicious_activity( req, req.res, `User not found ${ email }` );
+		return responseError( err.message );
+	}
 
-		const rc = await _recaptcha_check( req, recaptcha, err );
-		if ( !rc ) return cback ? cback( err ) : reject( err );
+	const rc = await _recaptcha_check( req, recaptcha, err );
+	if ( !rc ) return responseError( err.message );
 
-		if ( user.enabled === false ) {
-			err.message = _( 'User not enabled' );
-			console.error( "User not enabled: ", email );
-			add_suspicious_activity( req, req.res, `User not enabled ${ email }` );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( user.enabled === false ) {
+		err.message = _( 'User not enabled' );
+		console.error( "User not enabled: ", email );
+		add_suspicious_activity( req, req.res, `User not enabled ${ email }` );
+		return responseError( err.message );
+	}
 
-		if ( !_password_check( req, password, user, err, email ) )
-			return cback ? cback( err ) : reject( err );
+	if ( !_password_check( req, password, user, err, email ) )
+		return responseError( err.message );
 
-		// call the converter for user permissions
-		user = await _user_perms_convert( req, user );
+	// call the converter for user permissions
+	user = await _user_perms_convert( req, user );
 
+	const resp: UserSessionData = await _create_user_session( req, user, '', '', err );
+	if ( err.message ) return responseError( err.message );
 
-		const resp: UserSessionData = await _create_user_session( req, user, '', '', err );
-		if ( err.message ) return cback ? cback( err ) : reject( err );
+	await liwe_event_emit( req, USER_EVENT_LOGIN, { mode: 'login', user } );
 
-		await liwe_event_emit( req, USER_EVENT_LOGIN, { mode: 'login', user } );
-
-		return cback ? cback( null, resp ) : resolve( resp );
-		/*=== f2c_end post_user_login ===*/
-	} );
+	return responseSuccess( resp );
+	/*=== f2c_end post_user_login ===*/
 };
 // }}}
 
-// {{{ post_user_login_remote ( req: ILRequest, email: string, name: string, challenge: string, avatar?: string, cback: LCBack = null ): Promise<UserSessionData>
+// {{{ post_user_login_remote ( req: ILRequest, email: string, name: string, challenge: string, avatar?: stringcback: LCBack = null ): Promise<UserSessionData>
 /**
  *
  * This endpoint logs in a user authenticated by a remote service.
@@ -1144,48 +1082,46 @@ export const post_user_login = ( req: ILRequest, password: string, email?: strin
  * @return __plain__: UserSessionData
  *
  */
-export const post_user_login_remote = ( req: ILRequest, email: string, name: string, challenge: string, avatar?: string, cback: LCback = null ): Promise<UserSessionData> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_login_remote ===*/
-		const err = { message: _( 'Invalid data for user remote login' ) };
-		const domain = await system_domain_get_by_session( req );
+export const post_user_login_remote = async ( req: ILRequest, email: string, name: string, challenge: string, avatar?: string ): Promise<LiWEResponse<UserSessionData>> => {
+	/*=== f2c_start post_user_login_remote ===*/
+	const err = { message: _( 'Invalid data for user remote login' ) };
+	const domain = await system_domain_get_by_session( req );
 
-		// Check if the challenge is valid
-		if ( !challenge_check( challenge, [ email, name, avatar ] ) )
-			return cback ? cback( err ) : reject( err );
+	// Check if the challenge is valid
+	if ( !challenge_check( challenge, [ email, name, avatar ] ) )
+		return responseError( err.message );
 
-		// Check if the user exists
-		let user: User = await user_get( undefined, email );
+	// Check if the user exists
+	let user: User = await user_get( undefined, email );
 
-		if ( user ) {
-			// If the user is not enabled, we reject the request
-			if ( user.enabled === false ) {
-				err.message = _( 'User not enabled' );
-				add_suspicious_activity( req, req.res, `User not enabled ${ email }` );
-				return cback ? cback( err ) : reject( err );
-			}
-		} else {
-			// If we arrive here, it is a new user
-
-			// extract name and lastname from string
-			const [ name_, lastname ] = name.split( ' ' );
-			user = await _create_user( req, err, { email, name: name_, lastname, avatar, visible: true, enabled: true }, { skipPasswordCheck: true } );
-
-			if ( !user ) return cback ? cback( err ) : reject( err );
+	if ( user ) {
+		// If the user is not enabled, we reject the request
+		if ( user.enabled === false ) {
+			err.message = _( 'User not enabled' );
+			add_suspicious_activity( req, req.res, `User not enabled ${ email }` );
+			return responseError( err.message );
 		}
+	} else {
+		// If we arrive here, it is a new user
 
-		// If the user exists we create a valid session and return
-		const resp: UserSessionData = await _create_user_session( req, user, '', '', null );
+		// extract name and lastname from string
+		const [ name_, lastname ] = name.split( ' ' );
+		user = await _create_user( req, err, { email, name: name_, lastname, avatar, visible: true, enabled: true }, { skipPasswordCheck: true } );
 
-		await liwe_event_emit( req, USER_EVENT_LOGIN, { mode: 'login', info: 'remote', user } );
+		if ( !user ) return responseError( err.message );
+	}
 
-		return cback ? cback( null, resp ) : resolve( resp );
-		/*=== f2c_end post_user_login_remote ===*/
-	} );
+	// If the user exists we create a valid session and return
+	const resp: UserSessionData = await _create_user_session( req, user, '', '', null );
+
+	await liwe_event_emit( req, USER_EVENT_LOGIN, { mode: 'login', info: 'remote', user } );
+
+	return responseSuccess( resp );
+	/*=== f2c_end post_user_login_remote ===*/
 };
 // }}}
 
-// {{{ get_user_admin_list ( req: ILRequest, tag?: string, cback: LCBack = null ): Promise<User[]>
+// {{{ get_user_admin_list ( req: ILRequest, tag?: stringcback: LCBack = null ): Promise<User[]>
 /**
  *
  * Returns all user registered to the system.
@@ -1198,39 +1134,37 @@ export const post_user_login_remote = ( req: ILRequest, email: string, name: str
  * @return users: User
  *
  */
-export const get_user_admin_list = ( req: ILRequest, tag?: string, cback: LCback = null ): Promise<User[]> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start get_user_admin_list ===*/
-		// we need to check if the user is a super user or just a group admin
-		const is_group_admin = _is_group_admin( req );
-		let group = null;
+export const get_user_admin_list = async ( req: ILRequest, tag?: string ): Promise<LiWEResponse<User[]>> => {
+	/*=== f2c_start get_user_admin_list ===*/
+	// we need to check if the user is a super user or just a group admin
+	const is_group_admin = _is_group_admin( req );
+	let group = null;
 
-		if ( is_group_admin ) group = req.user.group;
+	if ( is_group_admin ) group = req.user.group;
 
-		const domain = await system_domain_get_by_session( req );
-		let domain_code = domain.code;
+	const domain = await system_domain_get_by_session( req );
+	let domain_code = domain.code;
 
-		// if the user has the 'user.domain' permission, we can show all users
-		if ( perm_available( req.user, [ 'user.domain' ] ) ) domain_code = undefined;
+	// if the user has the 'user.domain' permission, we can show all users
+	if ( perm_available( req.user, [ 'user.domain' ] ) ) domain_code = undefined;
 
-		const [ filters, values ] = adb_prepare_filters( "user", {
-			domain: domain_code,
-			group,
-			deleted: {
-				mode: 'null'
-			},
-			tags: {
-				mode: 'a',
-				val: [ tag ],
-				name: 'tags'
-			}
-		} );
-
-		const users = await adb_query_all( req.db, `FOR user IN ${ COLL_USERS } ${ filters } SORT user.name, user.lastname RETURN user`, values, UserKeys );
-
-		return cback ? cback( null, users ) : resolve( users );
-		/*=== f2c_end get_user_admin_list ===*/
+	const [ filters, values ] = adb_prepare_filters( "user", {
+		domain: domain_code,
+		group,
+		deleted: {
+			mode: 'null'
+		},
+		tags: {
+			mode: 'a',
+			val: [ tag ],
+			name: 'tags'
+		}
 	} );
+
+	const users = await adb_query_all( req.db, `FOR user IN ${ COLL_USERS } ${ filters } SORT user.name, user.lastname RETURN user`, values, UserKeys );
+
+	return responseSuccess( users );
+	/*=== f2c_end get_user_admin_list ===*/
 };
 // }}}
 
@@ -1243,25 +1177,23 @@ export const get_user_admin_list = ( req: ILRequest, tag?: string, cback: LCback
  * @return ok: boolean
  *
  */
-export const get_user_logout = ( req: ILRequest, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start get_user_logout ===*/
-		if ( !req.user ) return cback ? cback( null, false ) : resolve( false as any );
+export const get_user_logout = async ( req: ILRequest, ): Promise<LiWEResponse<boolean>> => {
+	/*=== f2c_start get_user_logout ===*/
+	if ( !req.user ) return responseSuccess( false );
 
-		const u: User = await user_get( req.user.id );
-		const [ key, sess_id ] = await session_id( req, null );
+	const u: User = await user_get( req.user.id );
+	const [ key, sess_id ] = await session_id( req, null );
 
-		await session_del( req, key );
+	await session_del( req, key );
 
-		// when the user logs out, we set a fake refresh token
-		u.refresh_token = mkid( '---' );
-		await adb_record_add( req.db, COLL_USERS, u );
+	// when the user logs out, we set a fake refresh token
+	u.refresh_token = mkid( '---' );
+	await adb_record_add( req.db, COLL_USERS, u );
 
-		await liwe_event_emit( req, USER_EVENT_LOGOUT, { mode: 'logout', user: u } );
+	await liwe_event_emit( req, USER_EVENT_LOGOUT, { mode: 'logout', user: u } );
 
-		return cback ? cback( null, true ) : resolve( true as any );
-		/*=== f2c_end get_user_logout ===*/
-	} );
+	return responseSuccess( true );
+	/*=== f2c_end get_user_logout ===*/
 };
 // }}}
 
@@ -1274,25 +1206,23 @@ export const get_user_logout = ( req: ILRequest, cback: LCback = null ): Promise
  * @return user: User
  *
  */
-export const get_user_me = ( req: ILRequest, cback: LCback = null ): Promise<User> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start get_user_me ===*/
-		const err = { message: _( 'User not found' ) };
-		const u = await user_get( req.user?.id );
+export const get_user_me = async ( req: ILRequest, ): Promise<LiWEResponse<User>> => {
+	/*=== f2c_start get_user_me ===*/
+	const err = { message: _( 'User not found' ) };
+	const u = await user_get( req.user?.id );
 
-		if ( !u ) return cback ? cback( err ) : reject( err );
+	if ( !u ) return responseError( err.message );
 
-		await _addresses_add( req, u );
+	await _addresses_add( req, u );
 
-		keys_filter( u, UserKeys );
+	keys_filter( u, UserKeys );
 
-		return cback ? cback( null, u ) : resolve( u );
-		/*=== f2c_end get_user_me ===*/
-	} );
+	return responseSuccess( u );
+	/*=== f2c_end get_user_me ===*/
 };
 // }}}
 
-// {{{ post_user_perms_set ( req: ILRequest, id_user: string, perms: UserPerms, cback: LCBack = null ): Promise<boolean>
+// {{{ post_user_perms_set ( req: ILRequest, id_user: string, perms: UserPermscback: LCBack = null ): Promise<boolean>
 /**
  *
  * This endpoint set the full user permissions.
@@ -1305,26 +1235,24 @@ export const get_user_me = ( req: ILRequest, cback: LCback = null ): Promise<Use
  * @return ok: boolean
  *
  */
-export const post_user_perms_set = ( req: ILRequest, id_user: string, perms: UserPerms, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_perms_set ===*/
-		const user = await user_get( id_user );
-		const err = { message: _( 'User not found' ) };
+export const post_user_perms_set = async ( req: ILRequest, id_user: string, perms: UserPerms ): Promise<LiWEResponse<boolean>> => {
+	/*=== f2c_start post_user_perms_set ===*/
+	const user = await user_get( id_user );
+	const err = { message: _( 'User not found' ) };
 
-		if ( !user ) return cback ? cback( err ) : reject( err );
+	if ( !user ) return responseError( err.message );
 
-		user.perms = perms;  // perms as any;
-		await adb_record_add( req.db, COLL_USERS, user );
+	user.perms = perms;  // perms as any;
+	await adb_record_add( req.db, COLL_USERS, user );
 
-		await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'perms', user } );
+	await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'perms', user } );
 
-		return cback ? cback( null, true ) : resolve( true );
-		/*=== f2c_end post_user_perms_set ===*/
-	} );
+	return responseSuccess( true );
+	/*=== f2c_end post_user_perms_set ===*/
 };
 // }}}
 
-// {{{ post_user_info_add ( req: ILRequest, key: string, data: any, cback: LCBack = null ): Promise<boolean>
+// {{{ post_user_info_add ( req: ILRequest, key: string, data: anycback: LCBack = null ): Promise<boolean>
 /**
  *
  * This endpoint adds extra information inside the `extra` field, under the `key` specified.
@@ -1338,23 +1266,21 @@ export const post_user_perms_set = ( req: ILRequest, id_user: string, perms: Use
  * @return ok: boolean
  *
  */
-export const post_user_info_add = ( req: ILRequest, key: string, data: any, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_info_add ===*/
-		const u = await user_get( req.user.id );
+export const post_user_info_add = async ( req: ILRequest, key: string, data: any ): Promise<LiWEResponse<boolean>> => {
+	/*=== f2c_start post_user_info_add ===*/
+	const u = await user_get( req.user.id );
 
-		if ( key ) u.extra[ key ] = data;
+	if ( key ) u.extra[ key ] = data;
 
-		await adb_record_add( req.db, COLL_USERS, u );
-		await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'info', user: u } );
+	await adb_record_add( req.db, COLL_USERS, u );
+	await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'info', user: u } );
 
-		return cback ? cback( null, 1 ) : resolve( 1 as any );
-		/*=== f2c_end post_user_info_add ===*/
-	} );
+	return responseSuccess( true );
+	/*=== f2c_end post_user_info_add ===*/
 };
 // }}}
 
-// {{{ delete_user_info_del ( req: ILRequest, key: string, cback: LCBack = null ): Promise<boolean>
+// {{{ delete_user_info_del ( req: ILRequest, key: stringcback: LCBack = null ): Promise<boolean>
 /**
  *
  * This endpoint deletes the specified `key` from the `extra` field.
@@ -1364,23 +1290,21 @@ export const post_user_info_add = ( req: ILRequest, key: string, data: any, cbac
  * @return ok: boolean
  *
  */
-export const delete_user_info_del = ( req: ILRequest, key: string, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start delete_user_info_del ===*/
-		const u = await user_get( req.user.id );
+export const delete_user_info_del = async ( req: ILRequest, key: string ): Promise<LiWEResponse<boolean>> => {
+	/*=== f2c_start delete_user_info_del ===*/
+	const u = await user_get( req.user.id );
 
-		u.extra[ key ] = '__@@_invalid_@@__';
+	u.extra[ key ] = '__@@_invalid_@@__';
 
-		await adb_record_add( req.db, COLL_USERS, u );
-		await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'info', user: u } );
+	await adb_record_add( req.db, COLL_USERS, u );
+	await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'info', user: u } );
 
-		return cback ? cback( null, true ) : resolve( true );
-		/*=== f2c_end delete_user_info_del ===*/
-	} );
+	return responseSuccess( true );
+	/*=== f2c_end delete_user_info_del ===*/
 };
 // }}}
 
-// {{{ patch_user_profile ( req: ILRequest, name?: string, lastname?: string, phone?: string, email?: string, addr_street?: string, addr_nr?: string, addr_zip?: string, addr_city?: string, addr_state?: string, addr_country?: string, facebook?: string, twitter?: string, linkedin?: string, instagram?: string, website?: string, cback: LCBack = null ): Promise<User>
+// {{{ patch_user_profile ( req: ILRequest, name?: string, lastname?: string, phone?: string, email?: string, addr_street?: string, addr_nr?: string, addr_zip?: string, addr_city?: string, addr_state?: string, addr_country?: string, facebook?: string, twitter?: string, linkedin?: string, instagram?: string, website?: stringcback: LCBack = null ): Promise<User>
 /**
  *
  * This is the first tab 'Profile' of the UserProfile interface.
@@ -1405,26 +1329,24 @@ export const delete_user_info_del = ( req: ILRequest, key: string, cback: LCback
  * @return user: User
  *
  */
-export const patch_user_profile = ( req: ILRequest, name?: string, lastname?: string, phone?: string, email?: string, addr_street?: string, addr_nr?: string, addr_zip?: string, addr_city?: string, addr_state?: string, addr_country?: string, facebook?: string, twitter?: string, linkedin?: string, instagram?: string, website?: string, cback: LCback = null ): Promise<User> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start patch_user_profile ===*/
-		const err = { message: _( 'User not found' ) };
-		let u: User = await user_get( req.user.id );
+export const patch_user_profile = async ( req: ILRequest, name?: string, lastname?: string, phone?: string, email?: string, addr_street?: string, addr_nr?: string, addr_zip?: string, addr_city?: string, addr_state?: string, addr_country?: string, facebook?: string, twitter?: string, linkedin?: string, instagram?: string, website?: string ): Promise<LiWEResponse<User>> => {
+	/*=== f2c_start patch_user_profile ===*/
+	const err = { message: _( 'User not found' ) };
+	let u: User = await user_get( req.user.id );
 
-		if ( !u ) return cback ? cback( err ) : reject( err );
+	if ( !u ) return responseError( err.message );
 
-		u = { ...u, ...keys_valid( { name, lastname, phone, facebook, twitter, linkedin, instagram, website } ) };
+	u = { ...u, ...keys_valid( { name, lastname, phone, facebook, twitter, linkedin, instagram, website } ) };
 
-		await adb_record_add( req.db, COLL_USERS, u );
-		await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'profile', user: u } );
+	await adb_record_add( req.db, COLL_USERS, u );
+	await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'profile', user: u } );
 
-		await address_add( req, u.id, addr_street, addr_nr, "home", "home", addr_city, addr_zip, addr_state, addr_country, null, null, null, null, null, null, true );
+	await address_add( req, u.id, addr_street, addr_nr, "home", "home", addr_city, addr_zip, addr_state, addr_country, null, null, null, null, null, null, true );
 
-		await _addresses_add( req, u );
+	await _addresses_add( req, u );
 
-		return cback ? cback( null, u ) : resolve( u );
-		/*=== f2c_end patch_user_profile ===*/
-	} );
+	return responseSuccess( u );
+	/*=== f2c_end patch_user_profile ===*/
 };
 // }}}
 
@@ -1437,19 +1359,17 @@ export const patch_user_profile = ( req: ILRequest, name?: string, lastname?: st
  * @return user: User
  *
  */
-export const get_user_test_create = ( req: ILRequest, cback: LCback = null ): Promise<User> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start get_user_test_create ===*/
-		const user = { "email": "mario.rossi@gmail.com", "password": sha512( "Ciao123!" ), "enabled": true, "created": Date(), name: "Mario", lastname: "Rossi" };
-		await adb_record_add( req.db, COLL_USERS, user );
+export const get_user_test_create = async ( req: ILRequest, ): Promise<LiWEResponse<User>> => {
+	/*=== f2c_start get_user_test_create ===*/
+	const user: User = { "id": mkid( 'user' ), "domain": "default", "email": "mario.rossi@gmail.com", "password": sha512( "Ciao123!" ), "enabled": true, name: "Mario", lastname: "Rossi" };
+	await adb_record_add( req.db, COLL_USERS, user );
 
-		return cback ? cback( null, user ) : resolve( user as any );
-		/*=== f2c_end get_user_test_create ===*/
-	} );
+	return responseSuccess( user );
+	/*=== f2c_end get_user_test_create ===*/
 };
 // }}}
 
-// {{{ patch_user_change_password ( req: ILRequest, old_password: string, new_password: string, recaptcha: string, cback: LCBack = null ): Promise<boolean>
+// {{{ patch_user_change_password ( req: ILRequest, old_password: string, new_password: string, recaptcha: stringcback: LCBack = null ): Promise<boolean>
 /**
  *
  * This is the change password functionality for UserProfile tab.
@@ -1462,35 +1382,33 @@ export const get_user_test_create = ( req: ILRequest, cback: LCback = null ): Pr
  * @return ok: boolean
  *
  */
-export const patch_user_change_password = ( req: ILRequest, old_password: string, new_password: string, recaptcha: string, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start patch_user_change_password ===*/
-		const err = { message: _( 'Passwords not matching' ) };
+export const patch_user_change_password = async ( req: ILRequest, old_password: string, new_password: string, recaptcha: string ): Promise<LiWEResponse<boolean>> => {
+	/*=== f2c_start patch_user_change_password ===*/
+	const err = { message: _( 'Passwords not matching' ) };
 
-		const valid = await _recaptcha_check( req, recaptcha, err );
+	const valid = await _recaptcha_check( req, recaptcha, err );
 
-		if ( !valid ) return cback ? cback( err ) : reject( err );
+	if ( !valid ) return responseError( err.message );
 
-		let user: User = await user_get( req.user.id );
+	let user: User = await user_get( req.user.id );
 
-		if ( !_password_check( req, old_password, user, err ) )
-			return cback ? cback( err ) : reject( err );
+	if ( !_password_check( req, old_password, user, err ) )
+		return responseError( err.message );
 
-		if ( !_valid_password( new_password, err, req.cfg ) )
-			return cback ? cback( err ) : reject( err );
+	if ( !_valid_password( new_password, err, req.cfg ) )
+		return responseError( err.message );
 
-		user.password = sha512( new_password, false );
+	user.password = sha512( new_password, false );
 
-		await adb_record_add( req.db, COLL_USERS, user );
-		await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'password', user } );
+	await adb_record_add( req.db, COLL_USERS, user );
+	await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'password', user } );
 
-		return cback ? cback( null, true ) : resolve( true );
-		/*=== f2c_end patch_user_change_password ===*/
-	} );
+	return responseSuccess( true );
+	/*=== f2c_end patch_user_change_password ===*/
 };
 // }}}
 
-// {{{ patch_user_set_bio ( req: ILRequest, tagline?: string, bio?: string, cback: LCBack = null ): Promise<User>
+// {{{ patch_user_set_bio ( req: ILRequest, tagline?: string, bio?: stringcback: LCBack = null ): Promise<User>
 /**
  *
  * Use this endpoint to update user `bio` or `tagline` (or both).
@@ -1502,24 +1420,22 @@ export const patch_user_change_password = ( req: ILRequest, old_password: string
  * @return user: User
  *
  */
-export const patch_user_set_bio = ( req: ILRequest, tagline?: string, bio?: string, cback: LCback = null ): Promise<User> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start patch_user_set_bio ===*/
-		let user: User = await user_get( req.user.id );
+export const patch_user_set_bio = async ( req: ILRequest, tagline?: string, bio?: string ): Promise<LiWEResponse<User>> => {
+	/*=== f2c_start patch_user_set_bio ===*/
+	let user: User = await user_get( req.user.id );
 
-		if ( tagline ) user.tagline = tagline;
-		if ( bio ) user.bio = bio;
+	if ( tagline ) user.tagline = tagline;
+	if ( bio ) user.bio = bio;
 
-		user = await adb_record_add( req.db, COLL_USERS, user, UserKeys );
-		await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'bio', user } );
+	user = await adb_record_add( req.db, COLL_USERS, user, UserKeys );
+	await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'bio', user } );
 
-		return cback ? cback( null, user ) : resolve( user );
-		/*=== f2c_end patch_user_set_bio ===*/
-	} );
+	return responseSuccess( user );
+	/*=== f2c_end patch_user_set_bio ===*/
 };
 // }}}
 
-// {{{ patch_user_set_billing ( req: ILRequest, address?: string, nr?: string, name?: string, city?: string, zip?: string, state?: string, country?: string, company_name?: string, fiscal_code?: string, vat_number?: string, sdi?: string, pec?: string, cback: LCBack = null ): Promise<User>
+// {{{ patch_user_set_billing ( req: ILRequest, address?: string, nr?: string, name?: string, city?: string, zip?: string, state?: string, country?: string, company_name?: string, fiscal_code?: string, vat_number?: string, sdi?: string, pec?: stringcback: LCBack = null ): Promise<User>
 /**
  *
  * Creates / updates the user billing info.
@@ -1541,23 +1457,21 @@ export const patch_user_set_bio = ( req: ILRequest, tagline?: string, bio?: stri
  * @return user: User
  *
  */
-export const patch_user_set_billing = ( req: ILRequest, address?: string, nr?: string, name?: string, city?: string, zip?: string, state?: string, country?: string, company_name?: string, fiscal_code?: string, vat_number?: string, sdi?: string, pec?: string, cback: LCback = null ): Promise<User> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start patch_user_set_billing ===*/
-		await address_add( req, req.user.id, address, nr, 'Invoice info', 'invoice', city, zip, state, country, company_name, fiscal_code, vat_number, sdi, pec, null, true );
+export const patch_user_set_billing = async ( req: ILRequest, address?: string, nr?: string, name?: string, city?: string, zip?: string, state?: string, country?: string, company_name?: string, fiscal_code?: string, vat_number?: string, sdi?: string, pec?: string ): Promise<LiWEResponse<User>> => {
+	/*=== f2c_start patch_user_set_billing ===*/
+	await address_add( req, req.user.id, address, nr, 'Invoice info', 'invoice', city, zip, state, country, company_name, fiscal_code, vat_number, sdi, pec, null, true );
 
-		const user: User = await user_get( req.user.id );
-		await _addresses_add( req, user );
+	const user: User = await user_get( req.user.id );
+	await _addresses_add( req, user );
 
-		keys_filter( user, UserKeys );
+	keys_filter( user, UserKeys );
 
-		return cback ? cback( null, user ) : resolve( user );
-		/*=== f2c_end patch_user_set_billing ===*/
-	} );
+	return responseSuccess( user );
+	/*=== f2c_end patch_user_set_billing ===*/
 };
 // }}}
 
-// {{{ post_user_login_metamask ( req: ILRequest, address: string, challenge: string, cback: LCBack = null ): Promise<UserSessionData>
+// {{{ post_user_login_metamask ( req: ILRequest, address: string, challenge: stringcback: LCBack = null ): Promise<UserSessionData>
 /**
  *
  * This endpoint logs in a user authenticated by a remote service.
@@ -1570,43 +1484,41 @@ export const patch_user_set_billing = ( req: ILRequest, address?: string, nr?: s
  * @return __plain__: UserSessionData
  *
  */
-export const post_user_login_metamask = ( req: ILRequest, address: string, challenge: string, cback: LCback = null ): Promise<UserSessionData> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_login_metamask ===*/
-		const err = { message: _( 'Invalid data for user remote login' ) };
+export const post_user_login_metamask = async ( req: ILRequest, address: string, challenge: string ): Promise<LiWEResponse<UserSessionData>> => {
+	/*=== f2c_start post_user_login_metamask ===*/
+	const err = { message: _( 'Invalid data for user remote login' ) };
 
-		console.log( "\n\n\n==== post_user_login_metamask: ", { address, challenge } );
+	console.log( "\n\n\n==== post_user_login_metamask: ", { address, challenge } );
 
-		// Check if the challenge is valid
-		if ( !challenge_check( challenge, [ address ] ) )
-			return cback ? cback( err ) : reject( err );
+	// Check if the challenge is valid
+	if ( !challenge_check( challenge, [ address ] ) )
+		return responseError( err.message );
 
-		// Check if the user exists
-		let user: User = await user_get( undefined, undefined, address );
+	// Check if the user exists
+	let user: User = await user_get( undefined, undefined, address );
 
-		if ( !user ) {
-			err.message = _( 'User not found' );
-			return cback ? cback( err ) : reject( err );
+	if ( !user ) {
+		err.message = _( 'User not found' );
+		return responseError( err.message );
+	}
+
+	if ( user ) {
+		// If the user is not enabled, we reject the request
+		if ( user.enabled === false ) {
+			err.message = _( 'User not enabled' );
+			add_suspicious_activity( req, req.res, `User not enabled ${ user.email }` );
+			return responseError( err.message );
 		}
+	}
 
-		if ( user ) {
-			// If the user is not enabled, we reject the request
-			if ( user.enabled === false ) {
-				err.message = _( 'User not enabled' );
-				add_suspicious_activity( req, req.res, `User not enabled ${ user.email }` );
-				return cback ? cback( err ) : reject( err );
-			}
-		}
-
-		// If the user exists we create a valid session and return
-		const resp: UserSessionData = await _create_user_session( req, user, '', '', null );
-		return cback ? cback( null, resp ) : resolve( resp );
-		/*=== f2c_end post_user_login_metamask ===*/
-	} );
+	// If the user exists we create a valid session and return
+	const resp: UserSessionData = await _create_user_session( req, user, '', '', null );
+	return responseSuccess( resp );
+	/*=== f2c_end post_user_login_metamask ===*/
 };
 // }}}
 
-// {{{ get_user_admin_get ( req: ILRequest, id?: string, email?: string, name?: string, lastname?: string, cback: LCBack = null ): Promise<User>
+// {{{ get_user_admin_get ( req: ILRequest, id?: string, email?: string, name?: string, lastname?: stringcback: LCBack = null ): Promise<User>
 /**
  *
  * This method can return a user after searching all users by some params.
@@ -1621,14 +1533,12 @@ export const post_user_login_metamask = ( req: ILRequest, address: string, chall
  * @return user: User
  *
  */
-export const get_user_admin_get = ( req: ILRequest, id?: string, email?: string, name?: string, lastname?: string, cback: LCback = null ): Promise<User> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start get_user_admin_get ===*/
-		const user: User = await adb_find_one( req.db, COLL_USERS, { id, email, name, lastname }, UserKeys );
+export const get_user_admin_get = async ( req: ILRequest, id?: string, email?: string, name?: string, lastname?: string ): Promise<LiWEResponse<User>> => {
+	/*=== f2c_start get_user_admin_get ===*/
+	const user: User = await adb_find_one( req.db, COLL_USERS, { id, email, name, lastname }, UserKeys );
 
-		return cback ? cback( null, user ) : resolve( user );
-		/*=== f2c_end get_user_admin_get ===*/
-	} );
+	return responseSuccess( user );
+	/*=== f2c_end get_user_admin_get ===*/
 };
 // }}}
 
@@ -1641,24 +1551,22 @@ export const get_user_admin_get = ( req: ILRequest, id?: string, email?: string,
  * @return ok: boolean
  *
  */
-export const get_user_remove_me = ( req: ILRequest, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start get_user_remove_me ===*/
-		let u: User = await user_get( req.user.id );
+export const get_user_remove_me = async ( req: ILRequest, ): Promise<LiWEResponse<boolean>> => {
+	/*=== f2c_start get_user_remove_me ===*/
+	let u: User = await user_get( req.user.id );
 
-		u.enabled = false;
+	u.enabled = false;
 
-		await adb_record_add( req.db, COLL_USERS, u );
-		await liwe_event_emit( req, USER_EVENT_DELETE, u );
-		await get_user_logout( req );
+	await adb_record_add( req.db, COLL_USERS, u );
+	await liwe_event_emit( req, USER_EVENT_DELETE, u );
+	await get_user_logout( req );
 
-		return cback ? cback( null, true ) : resolve( true );
-		/*=== f2c_end get_user_remove_me ===*/
-	} );
+	return responseSuccess( true );
+	/*=== f2c_end get_user_remove_me ===*/
 };
 // }}}
 
-// {{{ get_user_perms_get ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<boolean>
+// {{{ get_user_perms_get ( req: ILRequest, id_user: stringcback: LCBack = null ): Promise<boolean>
 /**
  *
  * This endpoint set returns full user permissions.
@@ -1668,21 +1576,19 @@ export const get_user_remove_me = ( req: ILRequest, cback: LCback = null ): Prom
  * @return ok: boolean
  *
  */
-export const get_user_perms_get = ( req: ILRequest, id_user: string, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start get_user_perms_get ===*/
-		const err = { message: _( 'User not found' ) };
-		const user: User = await user_get( id_user );
+export const get_user_perms_get = async ( req: ILRequest, id_user: string ): Promise<LiWEResponse<boolean>> => {
+	/*=== f2c_start get_user_perms_get ===*/
+	const err = { message: _( 'User not found' ) };
+	const user: User = await user_get( id_user );
 
-		if ( !user ) return cback ? cback( err ) : reject( err );
+	if ( !user ) return responseError( err.message );
 
-		return cback ? cback( null, user.perms ) : resolve( user.perms );
-		/*=== f2c_end get_user_perms_get ===*/
-	} );
+	return responseSuccess( user.perms );
+	/*=== f2c_end get_user_perms_get ===*/
 };
 // }}}
 
-// {{{ get_user_faces_get ( req: ILRequest, id_user?: string, cback: LCBack = null ): Promise<UserFaceRec[]>
+// {{{ get_user_faces_get ( req: ILRequest, id_user?: stringcback: LCBack = null ): Promise<UserFaceRec[]>
 /**
  *
  * Return all images available for face recognition
@@ -1694,22 +1600,20 @@ export const get_user_perms_get = ( req: ILRequest, id_user: string, cback: LCba
  * @return faces: UserFaceRec
  *
  */
-export const get_user_faces_get = ( req: ILRequest, id_user?: string, cback: LCback = null ): Promise<UserFaceRec[]> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start get_user_faces_get ===*/
-		if ( !id_user ) id_user = req.user.id;
+export const get_user_faces_get = async ( req: ILRequest, id_user?: string ): Promise<LiWEResponse<UserFaceRec[]>> => {
+	/*=== f2c_start get_user_faces_get ===*/
+	if ( !id_user ) id_user = req.user.id;
 
-		if ( !perm_available( req.user, [ 'user.create' ] ) ) id_user = req.user.id;
+	if ( !perm_available( req.user, [ 'user.create' ] ) ) id_user = req.user.id;
 
-		const faces: UserFaceRec[] = await adb_find_all( req.db, COLL_USER_FACERECS, { id_user }, UserFaceRecKeys );
+	const faces: UserFaceRec[] = await adb_find_all( req.db, COLL_USER_FACERECS, { id_user }, UserFaceRecKeys );
 
-		return cback ? cback( null, faces ) : resolve( faces );
-		/*=== f2c_end get_user_faces_get ===*/
-	} );
+	return responseSuccess( faces );
+	/*=== f2c_end get_user_faces_get ===*/
 };
 // }}}
 
-// {{{ post_user_upload2face ( req: ILRequest, id_upload: string, id_user?: string, cback: LCBack = null ): Promise<UserFaceRec>
+// {{{ post_user_upload2face ( req: ILRequest, id_upload: string, id_user?: stringcback: LCBack = null ): Promise<UserFaceRec>
 /**
  *
  * @param id_upload - The ID Upload [req]
@@ -1718,57 +1622,39 @@ export const get_user_faces_get = ( req: ILRequest, id_user?: string, cback: LCb
  * @return face: UserFaceRec
  *
  */
-export const post_user_upload2face = ( req: ILRequest, id_upload: string, id_user?: string, cback: LCback = null ): Promise<UserFaceRec> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_upload2face ===*/
-		// FIXME: rewrite using media manager
-		if ( !id_user ) id_user = req.user.id;
+export const post_user_upload2face = async ( req: ILRequest, id_upload: string, id_user?: string ): Promise<LiWEResponse<UserFaceRec>> => {
+	/*=== f2c_start post_user_upload2face ===*/
+	// FIXME: rewrite using media manager
+	if ( !id_user ) id_user = req.user.id;
 
-		if ( !perm_available( req.user, [ 'user.create' ] ) ) id_user = req.user.id;
+	if ( !perm_available( req.user, [ 'user.create' ] ) ) id_user = req.user.id;
 
-		// const upload: Upload = await upload_get( id_upload );
+	// const upload: Upload = await upload_get( id_upload );
 
-		// if ( !upload ) return cback ? cback( { message: _( 'Upload not found' ) } ) : reject( { message: _( 'Upload not found' ) } );
+	// if ( !upload ) return cback ? cback( { message: _( 'Upload not found' ) } ) : reject( { message: _( 'Upload not found' ) } );
 
-		// deletes old entry if exists
-		await adb_del_one( req.db, COLL_USER_FACERECS, { id_user, id_upload } );
+	// deletes old entry if exists
+	await adb_del_one( req.db, COLL_USER_FACERECS, { id_user, id_upload } );
 
-		// add new entry
-		const face: UserFaceRec = {
-			id: mkid( 'face' ),
-			id_user,
-			id_upload,
-			// domain: upload.domain,
-			// filename: upload.filename,
-			// path: upload.path,
-		};
+	// add new entry
+	const face: UserFaceRec = {
+		id: mkid( 'face' ),
+		id_user,
+		id_upload,
+		// domain: upload.domain,
+		// filename: upload.filename,
+		// path: upload.path,
+	};
 
-		await adb_record_add( req.db, COLL_USER_FACERECS, face, UserFaceRecKeys );
-		await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'face', user: face } );
+	await adb_record_add( req.db, COLL_USER_FACERECS, face, UserFaceRecKeys );
+	await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'face', user: face } );
 
-		return cback ? cback( null, face ) : resolve( face );
-		/*=== f2c_end post_user_upload2face ===*/
-	} );
+	return responseSuccess( face );
+	/*=== f2c_end post_user_upload2face ===*/
 };
 // }}}
 
-// {{{ get_user_faces_modules ( req: ILRequest, cback: LCBack = null ): Promise<boolean>
-/**
- *
- *
- * @return ok: boolean
- *
- */
-export const get_user_faces_modules = ( req: ILRequest, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start get_user_faces_modules ===*/
-
-		/*=== f2c_end get_user_faces_modules ===*/
-	} );
-};
-// }}}
-
-// {{{ post_user_anonymous ( req: ILRequest, ts: string, challenge: string, cback: LCBack = null ): Promise<User>
+// {{{ post_user_anonymous ( req: ILRequest, ts: string, challenge: stringcback: LCBack = null ): Promise<User>
 /**
  *
  * This method is used when you need a temporary session for a user.
@@ -1781,28 +1667,28 @@ export const get_user_faces_modules = ( req: ILRequest, cback: LCback = null ): 
  * @return user: User
  *
  */
-export const post_user_anonymous = ( req: ILRequest, ts: string, challenge: string, cback: LCback = null ): Promise<User> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_anonymous ===*/
-		const valid = challenge_check( challenge, [ ts ] );
-		const err = { message: _( 'Invalid challenge' ) };
+export const post_user_anonymous = async ( req: ILRequest, ts: string, challenge: string ): Promise<LiWEResponse<User>> => {
+	/*=== f2c_start post_user_anonymous ===*/
+	const valid = challenge_check( challenge, [ ts ] );
+	const err = { message: _( 'Invalid challenge' ) };
 
-		if ( !valid ) return cback ? cback( err ) : reject( err );
+	if ( !valid ) return responseError( err.message );
 
-		// const user: User = await user_create( req, `${ ts }@anonymous.me`, challenge, 'guest', 'user', true, 'it' );
-		const user: User = await _create_user( req, err, { email: `${ ts }@anonymous.me`, name: 'guest', lastname: 'user', enabled: true, language: 'it' } );
+	// const user: User = await user_create( req, `${ ts }@anonymous.me`, challenge, 'guest', 'user', true, 'it' );
+	const user: User = await _create_user( req, err, { email: `${ ts }@anonymous.me`, name: 'guest', lastname: 'user', enabled: true, language: 'it' } );
 
-		if ( !user ) return cback ? cback( err ) : reject( err );
+	if ( !user ) return responseError( err.message );
 
 
-		// await adb_record_add( req.db, COLL_USERS, user, UserKeys );
-		await liwe_event_emit( req, USER_EVENT_CREATE, user );
-		/*=== f2c_end post_user_anonymous ===*/
-	} );
+	// await adb_record_add( req.db, COLL_USERS, user, UserKeys );
+	await liwe_event_emit( req, USER_EVENT_CREATE, user );
+
+	return responseSuccess( user );
+	/*=== f2c_end post_user_anonymous ===*/
 };
 // }}}
 
-// {{{ post_user_register_app ( req: ILRequest, email: string, password: string, challenge: string, name?: string, lastname?: string, phone?: string, username?: string, group?: string, cback: LCBack = null ): Promise<UserActivationCode>
+// {{{ post_user_register_app ( req: ILRequest, email: string, password: string, challenge: string, name?: string, lastname?: string, phone?: string, username?: string, group?: stringcback: LCBack = null ): Promise<UserActivationCode>
 /**
  *
  * Start the registration process of the user replacing the rechapta with a challenge code.
@@ -1821,46 +1707,44 @@ export const post_user_anonymous = ( req: ILRequest, ts: string, challenge: stri
  * @return uac: UserActivationCode
  *
  */
-export const post_user_register_app = ( req: ILRequest, email: string, password: string, challenge: string, name?: string, lastname?: string, phone?: string, username?: string, group?: string, cback: LCback = null ): Promise<UserActivationCode> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_register_app ===*/
-		const challenge_fields = [ email, password, name, lastname, username, group, phone ];
-		const check_challenge = challenge_create( challenge_fields, true );
-		const err = { message: _( 'Invalid challenge' ) };
+export const post_user_register_app = async ( req: ILRequest, email: string, password: string, challenge: string, name?: string, lastname?: string, phone?: string, username?: string, group?: string ): Promise<LiWEResponse<UserActivationCode>> => {
+	/*=== f2c_start post_user_register_app ===*/
+	const challenge_fields = [ email, password, name, lastname, username, group, phone ];
+	const check_challenge = challenge_create( challenge_fields, true );
+	const err = { message: _( 'Invalid challenge' ) };
 
-		if ( check_challenge != challenge ) {
-			error( 'Invalid challenge', { received: challenge, expected: check_challenge } );
-			return cback ? cback( err ) : reject( err );
+	if ( check_challenge != challenge ) {
+		error( 'Invalid challenge', { received: challenge, expected: check_challenge } );
+		return responseError( err.message );
+	}
+
+	const user: User = await _create_user(
+		req,
+		err,
+		{
+			username,
+			email,
+			phone,
+			name,
+			lastname,
+			password,
+			group,
 		}
+	);
 
-		const user: User = await _create_user(
-			req,
-			err,
-			{
-				username,
-				email,
-				phone,
-				name,
-				lastname,
-				password,
-				group,
-			}
-		);
+	if ( !user ) return responseError( err.message );
 
-		if ( !user ) return cback ? cback( err ) : reject( err );
+	_send_validation_code( req, user );
 
-		_send_validation_code( req, user );
+	console.log( "\n\n==== CODE: ", user.code );
+	keys_filter( user, UserKeys );
 
-		console.log( "\n\n==== CODE: ", user.code );
-		keys_filter( user, UserKeys );
-
-		return cback ? cback( null, user ) : resolve( user );
-		/*=== f2c_end post_user_register_app ===*/
-	} );
+	return responseSuccess( user );
+	/*=== f2c_end post_user_register_app ===*/
 };
 // }}}
 
-// {{{ get_user_find ( req: ILRequest, search?: string, cback: LCBack = null ): Promise<UserDetails>
+// {{{ get_user_find ( req: ILRequest, search?: stringcback: LCBack = null ): Promise<UserDetails>
 /**
  *
  * This endpoints allows the search of a user in the system.
@@ -1875,22 +1759,20 @@ export const post_user_register_app = ( req: ILRequest, email: string, password:
  * @return user: UserDetails
  *
  */
-export const get_user_find = ( req: ILRequest, search?: string, cback: LCback = null ): Promise<UserDetails> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start get_user_find ===*/
-		const user: UserDetails = await adb_query_one( req.db, `
+export const get_user_find = async ( req: ILRequest, search?: string ): Promise<LiWEResponse<UserDetails>> => {
+	/*=== f2c_start get_user_find ===*/
+	const user: UserDetails = await adb_query_one( req.db, `
 		FOR u IN users
 			FILTER u.email == @search OR u.username == @search
 			RETURN u
 		`, { search }, UserDetailsKeys );
 
-		return cback ? cback( null, user ) : resolve( user );
-		/*=== f2c_end get_user_find ===*/
-	} );
+	return responseSuccess( user );
+	/*=== f2c_end get_user_find ===*/
 };
 // }}}
 
-// {{{ post_user_password_forgot_app ( req: ILRequest, username: string, challenge: string, cback: LCBack = null ): Promise<UserActivationCode>
+// {{{ post_user_password_forgot_app ( req: ILRequest, username: string, challenge: stringcback: LCBack = null ): Promise<UserActivationCode>
 /**
  *
  * Start the 'Password forgotten' process for the user in App Mode, where the reCaptcha cannot be used.
@@ -1904,49 +1786,47 @@ export const get_user_find = ( req: ILRequest, search?: string, cback: LCback = 
  * @return uac: UserActivationCode
  *
  */
-export const post_user_password_forgot_app = ( req: ILRequest, username: string, challenge: string, cback: LCback = null ): Promise<UserActivationCode> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_password_forgot_app ===*/
-		const challenge_fields = [ username ];
-		const check_challenge = challenge_create( challenge_fields, true );
-		const err = { message: _( 'Invalid challenge' ) };
+export const post_user_password_forgot_app = async ( req: ILRequest, username: string, challenge: string ): Promise<LiWEResponse<UserActivationCode>> => {
+	/*=== f2c_start post_user_password_forgot_app ===*/
+	const challenge_fields = [ username ];
+	const check_challenge = challenge_create( challenge_fields, true );
+	const err = { message: _( 'Invalid challenge' ) };
 
-		if ( check_challenge != challenge ) {
-			error( 'Invalid challenge', { received: challenge, expected: check_challenge } );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( check_challenge != challenge ) {
+		error( 'Invalid challenge', { received: challenge, expected: check_challenge } );
+		return responseError( err.message );
+	}
 
-		// first we check if the user exists using username as email
-		let user: User = await user_get( null, username );
+	// first we check if the user exists using username as email
+	let user: User = await user_get( null, username );
 
-		if ( user == null ) {
-			// if user == null, we try to get the user using the username
-			user = await user_get( null, null, null, false, username );
-		}
+	if ( user == null ) {
+		// if user == null, we try to get the user using the username
+		user = await user_get( null, null, null, false, username );
+	}
 
-		if ( !user ) {
-			err.message = _( 'User not found' );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( !user ) {
+		err.message = _( 'User not found' );
+		return responseError( err.message );
+	}
 
-		// if we are here, the user exists and we can create the token
-		_user_code( req, user );
+	// if we are here, the user exists and we can create the token
+	_user_code( req, user );
 
-		await adb_record_add( req.db, COLL_USERS, user );
+	await adb_record_add( req.db, COLL_USERS, user );
 
-		console.log( "=== OTP: ", user.code );
+	console.log( "=== OTP: ", user.code );
 
-		const uac: UserActivationCode = { code: user.code, email: user.email };
+	const uac: UserActivationCode = { code: user.code, email: user.email };
 
-		_send_validation_code( req, user );
+	_send_validation_code( req, user );
 
-		return cback ? cback( null, uac ) : resolve( uac );
-		/*=== f2c_end post_user_password_forgot_app ===*/
-	} );
+	return responseSuccess( uac );
+	/*=== f2c_end post_user_password_forgot_app ===*/
 };
 // }}}
 
-// {{{ post_user_del_app ( req: ILRequest, id_user: string, username: string, challenge: string, cback: LCBack = null ): Promise<boolean>
+// {{{ post_user_del_app ( req: ILRequest, id_user: string, username: string, challenge: stringcback: LCBack = null ): Promise<boolean>
 /**
  *
  * Deletes a user from the app, providing a challenge.
@@ -1959,63 +1839,61 @@ export const post_user_password_forgot_app = ( req: ILRequest, username: string,
  * @return ok: boolean
  *
  */
-export const post_user_del_app = ( req: ILRequest, id_user: string, username: string, challenge: string, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_del_app ===*/
-		const challenge_fields = [ id_user, username ];
-		const err = { message: _( 'Invalid challenge' ) };
+export const post_user_del_app = async ( req: ILRequest, id_user: string, username: string, challenge: string ): Promise<LiWEResponse<boolean>> => {
+	/*=== f2c_start post_user_del_app ===*/
+	const challenge_fields = [ id_user, username ];
+	const err = { message: _( 'Invalid challenge' ) };
 
-		if ( challenge_check( challenge, challenge_fields ) == false ) {
-			const check_challenge = challenge_create( challenge_fields, true );
-			add_suspicious_activity( req, req.res, `Tried to delete a user with wrong challenge: OK ${ check_challenge } / Provided ${ challenge }` );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( challenge_check( challenge, challenge_fields ) == false ) {
+		const check_challenge = challenge_create( challenge_fields, true );
+		add_suspicious_activity( req, req.res, `Tried to delete a user with wrong challenge: OK ${ check_challenge } / Provided ${ challenge }` );
+		return responseError( err.message );
+	}
 
-		const user: User = await user_get( id_user );
+	const user: User = await user_get( id_user );
 
-		if ( !user ) {
-			err.message = _( 'User not found' );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( !user ) {
+		err.message = _( 'User not found' );
+		return responseError( err.message );
+	}
 
-		if ( user.id != req.user.id ) {
-			err.message = _( 'You cannot delete another user' );
-			add_suspicious_activity( req, req.res, `Tried to delete another user: ${ user.id }` );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( user.id != req.user.id ) {
+		err.message = _( 'You cannot delete another user' );
+		add_suspicious_activity( req, req.res, `Tried to delete another user: ${ user.id }` );
+		return responseError( err.message );
+	}
 
-		if ( user.username != username ) {
-			err.message = _( 'Invalid username' );
-			add_suspicious_activity( req, req.res, `Tried to delete a user with wrong username: OK ${ user.username } / Provided ${ username }` );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( user.username != username ) {
+		err.message = _( 'Invalid username' );
+		add_suspicious_activity( req, req.res, `Tried to delete a user with wrong username: OK ${ user.username } / Provided ${ username }` );
+		return responseError( err.message );
+	}
 
-		// Before deleting the user, we emit the pre-delete event
-		// if resp contains any response with the `error` property, we stop the deletion
-		const resp: LiWEEventResponse = await liwe_event_emit( req, USER_EVENT_PRE_DELETE, user );
-		if ( resp && resp.length ) {
-			for ( let i = 0; i < resp.length; i++ ) {
-				if ( resp[ i ].error ) {
-					err.message = _( resp[ i ].error.message );
-					return cback ? cback( err ) : reject( err );
-				}
+	// Before deleting the user, we emit the pre-delete event
+	// if resp contains any response with the `error` property, we stop the deletion
+	const resp: LiWEEventResponse = await liwe_event_emit( req, USER_EVENT_PRE_DELETE, user );
+	if ( resp && resp.length ) {
+		for ( let i = 0; i < resp.length; i++ ) {
+			if ( resp[ i ].error ) {
+				err.message = _( resp[ i ].error.message );
+				return responseError( err.message );
 			}
 		}
+	}
 
-		await get_user_logout( req );
+	await get_user_logout( req );
 
-		// if we get here, we anonymize the user username and email
-		user.username = `${ user.id }_${ user.username }`;
-		user.email = `${ user.id }_${ user.email }`;
-		user.enabled = false;
-		user.deleted = new Date();
+	// if we get here, we anonymize the user username and email
+	user.username = `${ user.id }_${ user.username }`;
+	user.email = `${ user.id }_${ user.email }`;
+	user.enabled = false;
+	user.deleted = new Date();
 
-		await adb_record_add( req.db, COLL_USERS, user );
-		await liwe_event_emit( req, USER_EVENT_DELETE, user );
+	await adb_record_add( req.db, COLL_USERS, user );
+	await liwe_event_emit( req, USER_EVENT_DELETE, user );
 
-		return cback ? cback( null, true ) : resolve( true );
-		/*=== f2c_end post_user_del_app ===*/
-	} );
+	return responseSuccess( true );
+	/*=== f2c_end post_user_del_app ===*/
 };
 // }}}
 
@@ -2029,43 +1907,41 @@ export const post_user_del_app = ( req: ILRequest, id_user: string, username: st
  * @return url: string
  *
  */
-export const get_user_2fa_start = ( req: ILRequest, cback: LCback = null ): Promise<string> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start get_user_2fa_start ===*/
-		const err = { message: _( 'User not found' ) };
-		const user: User = await user_get( req.user.id );
+export const get_user_2fa_start = async ( req: ILRequest, ): Promise<LiWEResponse<string>> => {
+	/*=== f2c_start get_user_2fa_start ===*/
+	const err = { message: _( 'User not found' ) };
+	const user: User = await user_get( req.user.id );
 
-		if ( !user ) return cback ? cback( err ) : reject( err );
+	if ( !user ) return responseError( err.message );
 
-		const user2FA: User2FA = await _get_user_2fa( req, user );
+	const user2FA: User2FA = await _get_user_2fa( req, user );
 
-		if ( user2FA.twofactor && user2FA.enabled ) {
-			err.message = _( '2FA already enabled' );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( user2FA.twofactor && user2FA.enabled ) {
+		err.message = _( '2FA already enabled' );
+		return responseError( err.message );
+	}
 
-		const newSecret = twofactor.generateSecret( { name: req.cfg.app.name } );
+	const newSecret = twofactor.generateSecret( { name: req.cfg.app.name } );
 
-		// We save the secret inside the user
-		user2FA.twofactor = newSecret.secret;
-		user2FA.enabled = false;
+	// We save the secret inside the user
+	user2FA.twofactor = newSecret.secret;
+	user2FA.enabled = false;
 
-		// TODO: add backup codes
+	// TODO: add backup codes
 
-		// await adb_del_one( req.db, COLL_USER_2FAS, { id_user: user.id } );
-		await adb_record_add( req.db, COLL_USER_2FAS, user2FA );
-		await liwe_event_emit( req, USER_EVENT_2FA, user );
+	// await adb_del_one( req.db, COLL_USER_2FAS, { id_user: user.id } );
+	await adb_record_add( req.db, COLL_USER_2FAS, user2FA );
+	await liwe_event_emit( req, USER_EVENT_2FA, user );
 
-		// We return the QR Code URL
-		const url = newSecret.qr;
+	// We return the QR Code URL
+	const url = newSecret.qr;
 
-		return cback ? cback( null, url ) : resolve( url );
-		/*=== f2c_end get_user_2fa_start ===*/
-	} );
+	return responseSuccess( url );
+	/*=== f2c_end get_user_2fa_start ===*/
 };
 // }}}
 
-// {{{ post_user_login_2fa ( req: ILRequest, id: string, code: string, nonce: string, cback: LCBack = null ): Promise<UserSessionData>
+// {{{ post_user_login_2fa ( req: ILRequest, id: string, code: string, nonce: stringcback: LCBack = null ): Promise<UserSessionData>
 /**
  *
  * Completes the login process by providing the 2FA challenge value
@@ -2077,24 +1953,22 @@ export const get_user_2fa_start = ( req: ILRequest, cback: LCback = null ): Prom
  * @return __plain__: UserSessionData
  *
  */
-export const post_user_login_2fa = ( req: ILRequest, id: string, code: string, nonce: string, cback: LCback = null ): Promise<UserSessionData> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_login_2fa ===*/
-		const user: User = await user_get( id );
-		const err = { message: _( 'User not found' ) };
+export const post_user_login_2fa = async ( req: ILRequest, id: string, code: string, nonce: string ): Promise<LiWEResponse<UserSessionData>> => {
+	/*=== f2c_start post_user_login_2fa ===*/
+	const user: User = await user_get( id );
+	const err = { message: _( 'User not found' ) };
 
-		if ( !user ) return cback ? cback( err ) : reject( err );
+	if ( !user ) return responseError( err.message );
 
-		const resp: UserSessionData = await _create_user_session( req, user, nonce, code, err );
-		// if ( err.message ) return cback ? cback( err ) : reject( err );
+	const resp: UserSessionData = await _create_user_session( req, user, nonce, code, err );
+	// if ( err.message ) return responseError ( err.message );
 
-		return cback ? cback( null, resp ) : resolve( resp );
-		/*=== f2c_end post_user_login_2fa ===*/
-	} );
+	return responseSuccess( resp );
+	/*=== f2c_end post_user_login_2fa ===*/
 };
 // }}}
 
-// {{{ post_user_2fa_verify ( req: ILRequest, code: string, cback: LCBack = null ): Promise<boolean>
+// {{{ post_user_2fa_verify ( req: ILRequest, code: stringcback: LCBack = null ): Promise<boolean>
 /**
  *
  * Used to verify the 2FA activation for a new user.
@@ -2105,47 +1979,45 @@ export const post_user_login_2fa = ( req: ILRequest, id: string, code: string, n
  * @return ok: boolean
  *
  */
-export const post_user_2fa_verify = ( req: ILRequest, code: string, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_2fa_verify ===*/
-		const err = { message: _( 'User not found' ) };
-		const user: User = await user_get( req.user.id );
+export const post_user_2fa_verify = async ( req: ILRequest, code: string ): Promise<LiWEResponse<boolean>> => {
+	/*=== f2c_start post_user_2fa_verify ===*/
+	const err = { message: _( 'User not found' ) };
+	const user: User = await user_get( req.user.id );
 
-		if ( !user ) return cback ? cback( err ) : reject( err );
+	if ( !user ) return responseError( err.message );
 
-		const user2FA: User2FA = await _get_user_2fa( req, user );
+	const user2FA: User2FA = await _get_user_2fa( req, user );
 
-		console.log( "=== user2FA: ", user2FA );
+	console.log( "=== user2FA: ", user2FA );
 
-		if ( !user2FA.twofactor ) {
-			err.message = _( '2FA not enabled' );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( !user2FA.twofactor ) {
+		err.message = _( '2FA not enabled' );
+		return responseError( err.message );
+	}
 
-		if ( user2FA.twofactor && user2FA.enabled ) {
-			err.message = _( '2FA already enabled' );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( user2FA.twofactor && user2FA.enabled ) {
+		err.message = _( '2FA already enabled' );
+		return responseError( err.message );
+	}
 
-		const valid = twofactor.verifyToken( user2FA.twofactor, code );
+	const valid = twofactor.verifyToken( user2FA.twofactor, code );
 
-		if ( !valid || valid.delta < 0 || valid.delta > 1 ) {
-			err.message = _( 'Invalid code' );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( !valid || valid.delta < 0 || valid.delta > 1 ) {
+		err.message = _( 'Invalid code' );
+		return responseError( err.message );
+	}
 
-		user2FA.enabled = true;
+	user2FA.enabled = true;
 
-		await adb_record_add( req.db, COLL_USER_2FAS, user2FA );
-		await liwe_event_emit( req, USER_EVENT_2FA, user );
+	await adb_record_add( req.db, COLL_USER_2FAS, user2FA );
+	await liwe_event_emit( req, USER_EVENT_2FA, user );
 
-		return cback ? cback( null, true ) : resolve( true );
-		/*=== f2c_end post_user_2fa_verify ===*/
-	} );
+	return responseSuccess( true );
+	/*=== f2c_end post_user_2fa_verify ===*/
 };
 // }}}
 
-// {{{ post_user_admin_change_password ( req: ILRequest, id_user: string, password: string, cback: LCBack = null ): Promise<boolean>
+// {{{ post_user_admin_change_password ( req: ILRequest, id_user: string, password: stringcback: LCBack = null ): Promise<boolean>
 /**
  *
  * This is an enpoint that can help admins to change user password when needed.
@@ -2156,26 +2028,24 @@ export const post_user_2fa_verify = ( req: ILRequest, code: string, cback: LCbac
  * @return ok: boolean
  *
  */
-export const post_user_admin_change_password = ( req: ILRequest, id_user: string, password: string, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_admin_change_password ===*/
-		const err = { message: _( 'User not found' ) };
-		const user: User = await user_get( id_user );
+export const post_user_admin_change_password = async ( req: ILRequest, id_user: string, password: string ): Promise<LiWEResponse<boolean>> => {
+	/*=== f2c_start post_user_admin_change_password ===*/
+	const err = { message: _( 'User not found' ) };
+	const user: User = await user_get( id_user );
 
-		if ( !user ) return cback ? cback( err ) : reject( err );
+	if ( !user ) return responseError( err.message );
 
-		user.password = sha512( password );
+	user.password = sha512( password );
 
-		await adb_record_add( req.db, COLL_USERS, user );
-		await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'password', user } );
+	await adb_record_add( req.db, COLL_USERS, user );
+	await liwe_event_emit( req, USER_EVENT_UPDATE, { mode: 'password', user } );
 
-		return cback ? cback( null, true ) : resolve( true );
-		/*=== f2c_end post_user_admin_change_password ===*/
-	} );
+	return responseSuccess( true );
+	/*=== f2c_end post_user_admin_change_password ===*/
 };
 // }}}
 
-// {{{ post_user_admin_relogin ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<UserSessionData>
+// {{{ post_user_admin_relogin ( req: ILRequest, id_user: stringcback: LCBack = null ): Promise<UserSessionData>
 /**
  *
  * This endpoint allows a user to login to the system as a different user, without using login and password.
@@ -2185,38 +2055,36 @@ export const post_user_admin_change_password = ( req: ILRequest, id_user: string
  * @return __plain__: UserSessionData
  *
  */
-export const post_user_admin_relogin = ( req: ILRequest, id_user: string, cback: LCback = null ): Promise<UserSessionData> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_admin_relogin ===*/
-		const err = { message: '' };
+export const post_user_admin_relogin = async ( req: ILRequest, id_user: string ): Promise<LiWEResponse<UserSessionData>> => {
+	/*=== f2c_start post_user_admin_relogin ===*/
+	const err = { message: '' };
 
-		let user: User = await user_get( id_user );
+	let user: User = await user_get( id_user );
 
 
-		if ( !user ) {
-			err.message = _( 'User not found' );
-			console.error( "Relogin: User not found: ", id_user );
-			add_suspicious_activity( req, req.res, `Relogin: User not found ${ id_user }` );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( !user ) {
+		err.message = _( 'User not found' );
+		console.error( "Relogin: User not found: ", id_user );
+		add_suspicious_activity( req, req.res, `Relogin: User not found ${ id_user }` );
+		return responseError( err.message );
+	}
 
-		if ( user.enabled === false ) {
-			err.message = _( 'User not enabled' );
-			console.error( "Relogin: User not enabled: ", id_user );
-			add_suspicious_activity( req, req.res, `Relogin: User not enabled ${ id_user }` );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( user.enabled === false ) {
+		err.message = _( 'User not enabled' );
+		console.error( "Relogin: User not enabled: ", id_user );
+		add_suspicious_activity( req, req.res, `Relogin: User not enabled ${ id_user }` );
+		return responseError( err.message );
+	}
 
-		const resp: UserSessionData = await _create_user_session( req, user, '', '', err );
-		if ( err.message ) return cback ? cback( err ) : reject( err );
+	const resp: UserSessionData = await _create_user_session( req, user, '', '', err );
+	if ( err.message ) return responseError( err.message );
 
-		return cback ? cback( null, resp ) : resolve( resp );
-		/*=== f2c_end post_user_admin_relogin ===*/
-	} );
+	return responseSuccess( resp );
+	/*=== f2c_end post_user_admin_relogin ===*/
 };
 // }}}
 
-// {{{ get_user_domain_invitation_accept ( req: ILRequest, invitation: string, cback: LCBack = null ): Promise<boolean>
+// {{{ get_user_domain_invitation_accept ( req: ILRequest, invitation: stringcback: LCBack = null ): Promise<boolean>
 /**
  *
  * This endpoint adds a user to a new domain using a special invitation link. The invitation link is unique for each user.
@@ -2227,50 +2095,48 @@ export const post_user_admin_relogin = ( req: ILRequest, id_user: string, cback:
  * @return ok: boolean
  *
  */
-export const get_user_domain_invitation_accept = ( req: ILRequest, invitation: string, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start get_user_domain_invitation_accept ===*/
-		// invitation in a base64 encoded string containing the domain id, the expiration date and the challenge in JSON format
-		const err = { message: _( 'Invalid invitation' ) };
-		let inv: string = Buffer.from( invitation, 'base64' ).toString( 'utf8' );
-		let data: any = null;
+export const get_user_domain_invitation_accept = async ( req: ILRequest, invitation: string ): Promise<LiWEResponse<boolean>> => {
+	/*=== f2c_start get_user_domain_invitation_accept ===*/
+	// invitation in a base64 encoded string containing the domain id, the expiration date and the challenge in JSON format
+	const err = { message: _( 'Invalid invitation' ) };
+	let inv: string = Buffer.from( invitation, 'base64' ).toString( 'utf8' );
+	let data: any = null;
 
-		try {
-			data = JSON.parse( inv );
-		} catch ( e ) {
-			return cback ? cback( err ) : reject( err );
-		}
+	try {
+		data = JSON.parse( inv );
+	} catch ( e ) {
+		return responseError( err.message );
+	}
 
-		const challenge_fields = [ data.id_domain, data.expire, data.created ];
-		const check_challenge = challenge_create( challenge_fields, true );
+	const challenge_fields = [ data.id_domain, data.expire, data.created ];
+	const check_challenge = challenge_create( challenge_fields, true );
 
-		if ( check_challenge != data.challenge ) {
-			error( 'Invalid challenge', { received: data.challenge, expected: check_challenge } );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( check_challenge != data.challenge ) {
+		error( 'Invalid challenge', { received: data.challenge, expected: check_challenge } );
+		return responseError( err.message );
+	}
 
-		const domain: SystemDomain = await domain_get( data.id_domain );
+	const domain: SystemDomain = await domain_get( data.id_domain );
 
-		// delete the id_user / id_domain from user_domains if exists
-		await adb_del_one( req.db, COLL_USER_DOMAINS, { id_user: req.user.id, id_domain: data.id_domain } );
+	// delete the id_user / id_domain from user_domains if exists
+	await adb_del_one( req.db, COLL_USER_DOMAINS, { id_user: req.user.id, id_domain: data.id_domain } );
 
-		// add the user to the domain
-		const ud: UserDomain = {
-			name: domain.name,
-			id_user: req.user.id,
-			id_domain: data.id_domain,
-			preferred: false,
-		};
+	// add the user to the domain
+	const ud: UserDomain = {
+		name: domain.name,
+		id_user: req.user.id,
+		id_domain: data.id_domain,
+		preferred: false,
+	};
 
-		await adb_record_add( req.db, COLL_USER_DOMAINS, ud );
-		await liwe_event_emit( req, USER_EVENT_DOMAIN, ud );
+	await adb_record_add( req.db, COLL_USER_DOMAINS, ud );
+	await liwe_event_emit( req, USER_EVENT_DOMAIN, ud );
 
-		// update the user domain
-		await _update_user_domain( req, domain );
+	// update the user domain
+	await _update_user_domain( req, domain );
 
-		return cback ? cback( null, true ) : resolve( true );
-		/*=== f2c_end get_user_domain_invitation_accept ===*/
-	} );
+	return responseSuccess( true );
+	/*=== f2c_end get_user_domain_invitation_accept ===*/
 };
 // }}}
 
@@ -2281,18 +2147,16 @@ export const get_user_domain_invitation_accept = ( req: ILRequest, invitation: s
  * @return domains: UserDomain
  *
  */
-export const get_user_domains_list = ( req: ILRequest, cback: LCback = null ): Promise<UserDomain[]> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start get_user_domains_list ===*/
-		const domains: UserDomain[] = await adb_find_all( req.db, COLL_USER_DOMAINS, { id_user: req.user.id }, UserDomainKeys );
+export const get_user_domains_list = async ( req: ILRequest, ): Promise<LiWEResponse<UserDomain[]>> => {
+	/*=== f2c_start get_user_domains_list ===*/
+	const domains: UserDomain[] = await adb_find_all( req.db, COLL_USER_DOMAINS, { id_user: req.user.id }, UserDomainKeys );
 
-		return cback ? cback( null, domains ) : resolve( domains );
-		/*=== f2c_end get_user_domains_list ===*/
-	} );
+	return responseSuccess( domains );
+	/*=== f2c_end get_user_domains_list ===*/
 };
 // }}}
 
-// {{{ post_user_login_refresh ( req: ILRequest, token: string, cback: LCBack = null ): Promise<UserSessionData>
+// {{{ post_user_login_refresh ( req: ILRequest, token: stringcback: LCBack = null ): Promise<UserSessionData>
 /**
  *
  * Log in the user using the refresh token.
@@ -2305,29 +2169,27 @@ export const get_user_domains_list = ( req: ILRequest, cback: LCback = null ): P
  * @return __plain__: UserSessionData
  *
  */
-export const post_user_login_refresh = ( req: ILRequest, token: string, cback: LCback = null ): Promise<UserSessionData> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_login_refresh ===*/
-		const err = { message: _( 'Invalid token' ) };
-		const user: User = await user_get( null, null, null, false, null, null, token );
+export const post_user_login_refresh = async ( req: ILRequest, token: string ): Promise<LiWEResponse<UserSessionData>> => {
+	/*=== f2c_start post_user_login_refresh ===*/
+	const err = { message: _( 'Invalid token' ) };
+	const user: User = await user_get( null, null, null, false, null, null, token );
 
-		if ( !user ) return cback ? cback( err ) : reject( err );
+	if ( !user ) return responseError( err.message );
 
-		// we have to refresh the refresh token
-		user.refresh_token = mkid( 'tok' );
+	// we have to refresh the refresh token
+	user.refresh_token = mkid( 'tok' );
 
-		await adb_record_add( req.db, COLL_USERS, user );
+	await adb_record_add( req.db, COLL_USERS, user );
 
-		// If the user exists we create a valid session and return
-		const resp: UserSessionData = await _create_user_session( req, user, '', '', null );
+	// If the user exists we create a valid session and return
+	const resp: UserSessionData = await _create_user_session( req, user, '', '', null );
 
-		return cback ? cback( null, resp ) : resolve( resp );
-		/*=== f2c_end post_user_login_refresh ===*/
-	} );
+	return responseSuccess( resp );
+	/*=== f2c_end post_user_login_refresh ===*/
 };
 // }}}
 
-// {{{ post_user_domain_set ( req: ILRequest, id: string, code: string, cback: LCBack = null ): Promise<User>
+// {{{ post_user_domain_set ( req: ILRequest, id: string, code: stringcback: LCBack = null ): Promise<User>
 /**
  *
  * This method allows the user to set a new domain for the provided user
@@ -2338,51 +2200,27 @@ export const post_user_login_refresh = ( req: ILRequest, token: string, cback: L
  * @return user: User
  *
  */
-export const post_user_domain_set = ( req: ILRequest, id: string, code: string, cback: LCback = null ): Promise<User> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start post_user_domain_set ===*/
-		const err = { message: _( 'User not found' ) };
-		const user: User = await user_get( id );
+export const post_user_domain_set = async ( req: ILRequest, id: string, code: string ): Promise<LiWEResponse<User>> => {
+	/*=== f2c_start post_user_domain_set ===*/
+	const err = { message: _( 'User not found' ) };
+	const user: User = await user_get( id );
 
-		if ( !user ) return cback ? cback( err ) : reject( err );
+	if ( !user ) return responseError( err.message );
 
-		const domain: SystemDomain = await domain_get( null, code );
+	const domain: SystemDomain = await domain_get( null, code );
 
-		if ( !domain ) {
-			err.message = _( 'Domain not found' );
-			return cback ? cback( err ) : reject( err );
-		}
+	if ( !domain ) {
+		err.message = _( 'Domain not found' );
+		return responseError( err.message );
+	}
 
-		user.domain = domain.code;
+	user.domain = domain.code;
 
-		// delete the id_user / id_domain from user_domains if exists
-		await adb_record_add( req.db, COLL_USERS, user, UserKeys );
+	// delete the id_user / id_domain from user_domains if exists
+	await adb_record_add( req.db, COLL_USERS, user, UserKeys );
 
-		return cback ? cback( null, user ) : resolve( user );
-		/*=== f2c_end post_user_domain_set ===*/
-	} );
-};
-// }}}
-
-// {{{ user_facerec_get ( req: ILRequest, id_user: string, cback: LCBack = null ): Promise<UserFaceRec[]>
-/**
- *
- * Gets all Face Recs binded to a user
- *
- * @param req - The ILRequest [req]
- * @param id_user - ID user [req]
- *
- * @return : UserFaceRec
- *
- */
-export const user_facerec_get = ( req: ILRequest, id_user: string, cback: LCback = null ): Promise<UserFaceRec[]> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start user_facerec_get ===*/
-		const faces: UserFaceRec[] = await adb_find_all( req.db, COLL_USER_FACERECS, { id_user }, UserFaceRecKeys );
-
-		return cback ? cback( null, faces ) : resolve( faces );
-		/*=== f2c_end user_facerec_get ===*/
-	} );
+	return responseSuccess( user );
+	/*=== f2c_end post_user_domain_set ===*/
 };
 // }}}
 
@@ -2397,15 +2235,13 @@ export const user_facerec_get = ( req: ILRequest, id_user: string, cback: LCback
  * @return : boolean
  *
  */
-export const user_session_del = ( req: ILiWE, key: string, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start user_session_del ===*/
-		const s = "FOR el IN sessions FILTER el.key == @key REMOVE el IN sessions";
-		await _liwe.db.query( s, { key } );
+export const user_session_del = async ( req: ILiWE, key: string, cback: LCback = null ): Promise<boolean> => {
+	/*=== f2c_start user_session_del ===*/
+	const s = "FOR el IN sessions FILTER el.key == @key REMOVE el IN sessions";
+	await _liwe.db.query( s, { key } );
 
-		return cback ? cback( null, true ) : resolve( true );
-		/*=== f2c_end user_session_del ===*/
-	} );
+	return true;
+	/*=== f2c_end user_session_del ===*/
 };
 // }}}
 
@@ -2421,24 +2257,22 @@ export const user_session_del = ( req: ILiWE, key: string, cback: LCback = null 
  * @return : any
  *
  */
-export const user_session_get = ( req: ILRequest, tok: string, cback: LCback = null ): Promise<any> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start user_session_get ===*/
-		const payload = jwt_decrypt( tok, _liwe.cfg.security.secret );
-		const err = { message: _( 'Session expired' ) };
+export const user_session_get = async ( req: ILRequest, tok: string, cback: LCback = null ): Promise<any> => {
+	/*=== f2c_start user_session_get ===*/
+	const payload = jwt_decrypt( tok, _liwe.cfg.security.secret );
+	const err = { message: _( 'Session expired' ) };
 
-		if ( !payload ) return cback ? cback( err ) : reject( err );
+	if ( !payload ) return responseError( err.message );
 
-		const [ key, sess_id ] = await session_id( req, payload );
+	const [ key, sess_id ] = await session_id( req, payload );
 
-		const data = await session_get( req, key );
+	const data = await session_get( req, key );
 
-		err.message = _( 'Session not found' );
-		if ( !data ) return cback ? cback( err ) : reject( err );
+	err.message = _( 'Session not found' );
+	if ( !data ) return responseError( err.message );
 
-		return cback ? cback( null, data ) : resolve( data );
-		/*=== f2c_end user_session_get ===*/
-	} );
+	return responseSuccess( data );
+	/*=== f2c_end user_session_get ===*/
 };
 // }}}
 
@@ -2455,37 +2289,36 @@ export const user_session_get = ( req: ILRequest, tok: string, cback: LCback = n
  * @return : string
  *
  */
-export const user_session_create = ( req: ILRequest, user: User, cback: LCback = null ): Promise<string> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start user_session_create ===*/
-		const [ key, sess_id ] = await session_id( req, user.id );
+export const user_session_create = async ( req: ILRequest, user: User, cback: LCback = null ): Promise<string> => {
+	/*=== f2c_start user_session_create ===*/
+	const [ key, sess_id ] = await session_id( req, user.id );
 
-		if ( req.cfg.security?.session?.single )
-			await session_remove_all( req, sess_id );
+	if ( req.cfg.security?.session?.single )
+		await session_remove_all( req, sess_id );
 
-		// We save the sess_id inside the token, not the session_key, because the key is
-		// calculated by `session_id()` call
-		const tok = jwt_crypt( sess_id, req.cfg.security.secret, parseInt( req.cfg.security.token_expires.toString(), 10 ) );
+	// We save the sess_id inside the token, not the session_key, because the key is
+	// calculated by `session_id()` call
+	const tok = jwt_crypt( sess_id, req.cfg.security.secret, parseInt( req.cfg.security.token_expires.toString(), 10 ) );
 
-		const data = {
-			user: {
-				id: user.id,
-				domain: user.domain,
-				name: user.name,
-				lastname: user.lastname,
-				email: user.email,
-				perms: user.perms,
-				session_key: key,
-				group: user.group,
-				avatar: user.avatar,
-			}
-		};
+	const data = {
+		user: {
+			id: user.id,
+			domain: user.domain,
+			name: user.name,
+			lastname: user.lastname,
+			email: user.email,
+			perms: user.perms,
+			session_key: key,
+			group: user.group,
+			avatar: user.avatar,
+		}
+	};
 
-		await session_create( req, key, user.domain, data );
+	await session_create( req, key, user.domain, data );
 
-		return cback ? cback( null, tok ) : resolve( tok );
-		/*=== f2c_end user_session_create ===*/
-	} );
+	return tok;
+	// return responseSuccess( tok );
+	/*=== f2c_end user_session_create ===*/
 };
 // }}}
 
@@ -2500,15 +2333,13 @@ export const user_session_create = ( req: ILRequest, user: User, cback: LCback =
  * @return : User
  *
  */
-export const user_get_by_group = ( req: ILRequest, group: string, cback: LCback = null ): Promise<User[]> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start user_get_by_group ===*/
-		group = group.toUpperCase();
-		const users: User[] = await adb_find_all( req.db, COLL_USERS, { group }, UserKeys );
+export const user_get_by_group = async ( req: ILRequest, group: string, cback: LCback = null ): Promise<User[]> => {
+	/*=== f2c_start user_get_by_group ===*/
+	group = group.toUpperCase();
+	const users: User[] = await adb_find_all( req.db, COLL_USERS, { group }, UserKeys );
 
-		return cback ? cback( null, users ) : resolve( users );
-		/*=== f2c_end user_get_by_group ===*/
-	} );
+	return users;
+	/*=== f2c_end user_get_by_group ===*/
 };
 // }}}
 
@@ -2523,14 +2354,12 @@ export const user_get_by_group = ( req: ILRequest, group: string, cback: LCback 
  * @return : User
  *
  */
-export const users_list = ( req: ILRequest, query?: any, cback: LCback = null ): Promise<User[]> => {
-	return new Promise( async ( resolve, reject ) => {
-		/*=== f2c_start users_list ===*/
-		const users: User[] = await adb_find_all( req.db, COLL_USERS, query, UserKeys );
+export const users_list = async ( req: ILRequest, query?: any, cback: LCback = null ): Promise<User[]> => {
+	/*=== f2c_start users_list ===*/
+	const users: User[] = await adb_find_all( req.db, COLL_USERS, query, UserKeys );
 
-		return cback ? cback( null, users ) : resolve( users );
-		/*=== f2c_end users_list ===*/
-	} );
+	return users;
+	/*=== f2c_end users_list ===*/
 };
 // }}}
 
@@ -2544,59 +2373,57 @@ export const users_list = ( req: ILRequest, query?: any, cback: LCback = null ):
  * @return : boolean
  *
  */
-export const user_db_init = ( liwe: ILiWE, cback: LCback = null ): Promise<boolean> => {
-	return new Promise( async ( resolve, reject ) => {
-		_liwe = liwe;
+export const user_db_init = async ( liwe: ILiWE, cback: LCback = null ): Promise<boolean> => {
+	_liwe = liwe;
 
-		system_permissions_register( 'user', _module_perms );
+	system_permissions_register( 'user', _module_perms );
 
-		await adb_collection_init( liwe.db, COLL_USER_FACERECS, [
-			{ type: "persistent", fields: [ "id" ], unique: true },
-			{ type: "persistent", fields: [ "domain" ], unique: false },
-			{ type: "persistent", fields: [ "id_user" ], unique: false },
-			{ type: "persistent", fields: [ "id_upload" ], unique: true },
-		], { drop: false } );
+	await adb_collection_init( liwe.db, COLL_USER_FACERECS, [
+		{ type: "persistent", fields: [ "id" ], unique: true },
+		{ type: "persistent", fields: [ "domain" ], unique: false },
+		{ type: "persistent", fields: [ "id_user" ], unique: false },
+		{ type: "persistent", fields: [ "id_upload" ], unique: true },
+	], { drop: false } );
 
-		await adb_collection_init( liwe.db, COLL_USERS, [
-			{ type: "persistent", fields: [ "id" ], unique: true },
-			{ type: "persistent", fields: [ "domain" ], unique: false },
-			{ type: "persistent", fields: [ "email" ], unique: true },
-			{ type: "persistent", fields: [ "username" ], unique: true },
-			{ type: "persistent", fields: [ "enabled" ], unique: false },
-			{ type: "persistent", fields: [ "phone" ], unique: false },
-			{ type: "persistent", fields: [ "tags[*]" ], unique: false },
-			{ type: "persistent", fields: [ "id_upload" ], unique: false },
-			{ type: "persistent", fields: [ "deleted" ], unique: false },
-			{ type: "persistent", fields: [ "group" ], unique: false },
-			{ type: "persistent", fields: [ "privacy" ], unique: false },
-			{ type: "persistent", fields: [ "refresh_token" ], unique: true },
-		], { drop: false } );
+	await adb_collection_init( liwe.db, COLL_USERS, [
+		{ type: "persistent", fields: [ "id" ], unique: true },
+		{ type: "persistent", fields: [ "domain" ], unique: false },
+		{ type: "persistent", fields: [ "email" ], unique: true },
+		{ type: "persistent", fields: [ "username" ], unique: true },
+		{ type: "persistent", fields: [ "enabled" ], unique: false },
+		{ type: "persistent", fields: [ "phone" ], unique: false },
+		{ type: "persistent", fields: [ "tags[*]" ], unique: false },
+		{ type: "persistent", fields: [ "id_upload" ], unique: false },
+		{ type: "persistent", fields: [ "deleted" ], unique: false },
+		{ type: "persistent", fields: [ "group" ], unique: false },
+		{ type: "persistent", fields: [ "privacy" ], unique: false },
+		{ type: "persistent", fields: [ "refresh_token" ], unique: true },
+	], { drop: false } );
 
-		await adb_collection_init( liwe.db, COLL_USER_2FAS, [
-			{ type: "persistent", fields: [ "id_user" ], unique: true },
-			{ type: "persistent", fields: [ "nonce" ], unique: false },
-		], { drop: false } );
+	await adb_collection_init( liwe.db, COLL_USER_2FAS, [
+		{ type: "persistent", fields: [ "id_user" ], unique: true },
+		{ type: "persistent", fields: [ "nonce" ], unique: false },
+	], { drop: false } );
 
-		await adb_collection_init( liwe.db, COLL_USER_DOMAINS, [
-			{ type: "persistent", fields: [ "id_user" ], unique: true },
-			{ type: "persistent", fields: [ "id_domain" ], unique: false },
-		], { drop: false } );
+	await adb_collection_init( liwe.db, COLL_USER_DOMAINS, [
+		{ type: "persistent", fields: [ "id_user" ], unique: true },
+		{ type: "persistent", fields: [ "id_domain" ], unique: false },
+	], { drop: false } );
 
-		/*=== f2c_start user_db_init ===*/
+	/*=== f2c_start user_db_init ===*/
 
-		// Create system users
-		await Promise.all( _liwe.cfg.user.users.map( async ( u: any ) => {
-			const ck = await adb_query_one( liwe.db, `FOR u IN ${ COLL_USERS } FILTER u.email == @email RETURN u.id`, { email: u.email } );
-			if ( ck ) return true;
+	// Create system users
+	await Promise.all( _liwe.cfg.user.users.map( async ( u: any ) => {
+		const ck = await adb_query_one( liwe.db, `FOR u IN ${ COLL_USERS } FILTER u.email == @email RETURN u.id`, { email: u.email } );
+		if ( ck ) return true;
 
-			const err = { message: '' };
+		const err = { message: '' };
 
-			return await _create_user( { db: liwe.db, cfg: liwe.cfg } as ILRequest, err, u );
-		} ) );
+		return await _create_user( { db: liwe.db, cfg: liwe.cfg } as ILRequest, err, u );
+	} ) );
 
-		return cback ? cback( null, _liwe.db ) : resolve( _liwe.db );
-		/*=== f2c_end user_db_init ===*/
-	} );
+	return _liwe.db;
+	/*=== f2c_end user_db_init ===*/
 };
 // }}}
 
