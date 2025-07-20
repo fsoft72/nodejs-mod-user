@@ -65,6 +65,8 @@ export const user_get = async ( id?: string, email?: string, wallet?: string, fa
 	if ( email ) email = email.trim().toLowerCase();
 	if ( username ) username = username.trim().toLowerCase();
 
+	console.log( "=== USER GET: ", { id, email, wallet, username, phone, refresh_token } );
+
 	let user: User = await adb_find_one( _liwe.db, COLL_USERS, { id, email, wallet, username, phone, refresh_token } );
 
 	if ( !user ) return null;
@@ -147,6 +149,7 @@ export const middleware_init = ( liwe: ILiWE ) => {
 				try {
 					const data: any = await user_session_get( req, _tok );
 					const user = { ...data.user };
+					console.log( "=== MIDDLEWARE USER: ", data );
 					req.user = user;
 					req.session = data;
 				} catch ( e ) {
@@ -946,9 +949,13 @@ export const get_user_register_activate = async ( req: ILRequest, code: string )
  */
 export const post_user_tag = async ( req: ILRequest, id_user: string, tags: string[] ): Promise<LiWEResponse<User>> => {
 	/*=== f2c_start post_user_tag ===*/
-	let user = await user_get( id_user );
+	const err = { message: '' };
 
-	user = await tag_obj( req, tags, user, 'user' ) as any;
+	let user = await user_get( id_user );
+	if ( !user ) return responseError( err.message );
+
+	user = await tag_obj( req, err, tags, user, 'user' ) as any;
+	if ( !user ) return responseError( err.message );
 
 	user = await adb_record_add( _liwe.db, COLL_USERS, user );
 
@@ -2262,16 +2269,22 @@ export const user_session_get = async ( req: ILRequest, tok: string, cback: LCba
 	const payload = jwt_decrypt( tok, _liwe.cfg.security.secret );
 	const err = { message: _( 'Session expired' ) };
 
-	if ( !payload ) return responseError( err.message );
+	if ( !payload ) {
+		console.error( "ERROR. Session expired: ", tok );
+		return null;
+	}
 
 	const [ key, sess_id ] = await session_id( req, payload );
 
 	const data = await session_get( req, key );
 
 	err.message = _( 'Session not found' );
-	if ( !data ) return responseError( err.message );
+	if ( !data ) {
+		console.error( "ERROR. Session not found: ", key );
+		return null;
+	}
 
-	return responseSuccess( data );
+	return data;
 	/*=== f2c_end user_session_get ===*/
 };
 // }}}

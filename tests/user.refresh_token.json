@@ -18,14 +18,14 @@
             },
             "tests": [
                 {
-                    "field": "uac",
+                    "field": "data",
                     "mode": "SIZE-GT",
                     "value": 0
                 }
             ],
             "fields": [
                 [
-                    "uac",
+                    "data",
                     "code"
                 ]
             ]
@@ -36,7 +36,7 @@
             "auth": false,
             "tests": [
                 {
-                    "field": "user.name",
+                    "field": "data.name",
                     "mode": "EQUAL",
                     "value": "Mario"
                 }
@@ -53,19 +53,19 @@
             },
             "tests": [
                 {
-                    "field": "access_token",
+                    "field": "data.access_token",
                     "mode": "SIZE-GT",
                     "value": 0
                 },
                 {
-                    "field": "token_type",
+                    "field": "data.token_type",
                     "mode": "EQUAL",
                     "value": "bearer"
                 }
             ],
             "fields": [
                 [
-                    "access_token",
+                    "data.access_token",
                     "token"
                 ]
             ]
@@ -86,12 +86,15 @@
             },
             "fields": [
                 [
-                    "access_token",
+                    "data.access_token",
                     "token"
                 ],
-                "refresh_token",
                 [
-                    "id",
+                    "data.refresh_token",
+                    "refresh_token"
+                ],
+                [
+                    "data.id",
                     "mario_id_user"
                 ]
             ]
@@ -105,10 +108,13 @@
             },
             "fields": [
                 [
-                    "access_token",
+                    "data.access_token",
                     "token"
                 ],
-                "refresh_token"
+                [
+                    "data.refresh_token",
+                    "refresh_token"
+                ]
             ]
         },
         {
@@ -117,7 +123,7 @@
             "auth": true,
             "tests": [
                 {
-                    "field": "user.name",
+                    "field": "data.name",
                     "mode": "EQUAL",
                     "value": "Mario"
                 }
@@ -132,12 +138,12 @@
             },
             "tests": [
                 {
-                    "field": "access_token",
+                    "field": "data.access_token",
                     "mode": "SIZE-GT",
                     "value": 0
                 },
                 {
-                    "field": "refresh_token",
+                    "field": "data.refresh_token",
                     "mode": "NOT_EQUAL",
                     "value": "%(refresh_token)s"
                 }
@@ -153,7 +159,7 @@
             },
             "fields": [
                 [
-                    "access_token",
+                    "data.access_token",
                     "token"
                 ]
             ]
