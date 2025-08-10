@@ -4,7 +4,7 @@
  */
 
 import { ILRequest, ILResponse, LCback, ILiweConfig, ILError, ILiWE } from '../../liwe/types';
-import { LiWEResponse, responseError, responseSuccess } from '../../liwe/response';
+import { LiWEError, LiWEResponse, responseError, responseSuccess } from '../../liwe/response';
 import { $l } from '../../liwe/locale';
 import { system_permissions_register } from '../system/methods';
 
@@ -236,6 +236,7 @@ const _create_user_session = async ( req: ILRequest, user: User, twoFANounce = '
 
 			return {
 				id: user.id,
+				id_user: user.id,
 				nonce: user2FA.nonce,
 			};
 		}
@@ -249,7 +250,7 @@ const _create_user_session = async ( req: ILRequest, user: User, twoFANounce = '
 				user2FA.nonce = mkid( 'nonce' );
 				await adb_record_add( req.db, COLL_USER_2FAS, user2FA );
 
-				return { id: user.id, nonce: user2FA.nonce };
+				return { id: user.id, nonce: user2FA.nonce, id_user: user.id };
 			}
 
 			// the user has 2FA and a code was provided
@@ -261,7 +262,7 @@ const _create_user_session = async ( req: ILRequest, user: User, twoFANounce = '
 				// the code is wrong
 				user2FA.nonce = mkid( 'nonce' );
 				await adb_record_add( req.db, COLL_USER_2FAS, user2FA );
-				return { id: user.id, nonce: user2FA.nonce };
+				return { id: user.id, nonce: user2FA.nonce, id_user: user.id };
 			}
 		}
 
@@ -291,6 +292,7 @@ const _create_user_session = async ( req: ILRequest, user: User, twoFANounce = '
 		perms: user.perms,
 		group: user.group,
 		nonce: null,
+		id_user: user.id,
 	};
 
 	return resp;
@@ -993,6 +995,7 @@ export const post_user_token = async ( req: ILRequest, username: string, passwor
 
 	const resp: UserSessionData = {
 		id: u.id,
+		id_user: u.id,
 		access_token: tok,
 		refresh_token: u.refresh_token,
 		token_type: 'bearer',
@@ -1368,7 +1371,7 @@ export const patch_user_profile = async ( req: ILRequest, name?: string, lastnam
  */
 export const get_user_test_create = async ( req: ILRequest, ): Promise<LiWEResponse<User>> => {
 	/*=== f2c_start get_user_test_create ===*/
-	const user: User = { "id": mkid( 'user' ), "domain": "default", "email": "mario.rossi@gmail.com", "password": sha512( "Ciao123!" ), "enabled": true, name: "Mario", lastname: "Rossi" };
+	const user: User = { "id": mkid( 'user' ), "domain": "default", "username": "demouser", "email": "mario.rossi@gmail.com", "password": sha512( "Ciao123!" ), "enabled": true, name: "Mario", lastname: "Rossi" };
 	await adb_record_add( req.db, COLL_USERS, user );
 
 	return responseSuccess( user );
@@ -2242,7 +2245,7 @@ export const post_user_domain_set = async ( req: ILRequest, id: string, code: st
  * @return : boolean
  *
  */
-export const user_session_del = async ( req: ILiWE, key: string, cback: LCback = null ): Promise<boolean> => {
+export const user_session_del = async ( req: ILiWE, key: string, ): Promise<boolean> => {
 	/*=== f2c_start user_session_del ===*/
 	const s = "FOR el IN sessions FILTER el.key == @key REMOVE el IN sessions";
 	await _liwe.db.query( s, { key } );
@@ -2264,7 +2267,7 @@ export const user_session_del = async ( req: ILiWE, key: string, cback: LCback =
  * @return : any
  *
  */
-export const user_session_get = async ( req: ILRequest, tok: string, cback: LCback = null ): Promise<any> => {
+export const user_session_get = async ( req: ILRequest, tok: string, ): Promise<any> => {
 	/*=== f2c_start user_session_get ===*/
 	const payload = jwt_decrypt( tok, _liwe.cfg.security.secret );
 	const err = { message: _( 'Session expired' ) };
@@ -2302,7 +2305,7 @@ export const user_session_get = async ( req: ILRequest, tok: string, cback: LCba
  * @return : string
  *
  */
-export const user_session_create = async ( req: ILRequest, user: User, cback: LCback = null ): Promise<string> => {
+export const user_session_create = async ( req: ILRequest, user: User, ): Promise<string> => {
 	/*=== f2c_start user_session_create ===*/
 	const [ key, sess_id ] = await session_id( req, user.id );
 
@@ -2346,7 +2349,7 @@ export const user_session_create = async ( req: ILRequest, user: User, cback: LC
  * @return : User
  *
  */
-export const user_get_by_group = async ( req: ILRequest, group: string, cback: LCback = null ): Promise<User[]> => {
+export const user_get_by_group = async ( req: ILRequest, group: string, ): Promise<User[]> => {
 	/*=== f2c_start user_get_by_group ===*/
 	group = group.toUpperCase();
 	const users: User[] = await adb_find_all( req.db, COLL_USERS, { group }, UserKeys );
@@ -2367,7 +2370,7 @@ export const user_get_by_group = async ( req: ILRequest, group: string, cback: L
  * @return : User
  *
  */
-export const users_list = async ( req: ILRequest, query?: any, cback: LCback = null ): Promise<User[]> => {
+export const users_list = async ( req: ILRequest, query?: any, ): Promise<User[]> => {
 	/*=== f2c_start users_list ===*/
 	const users: User[] = await adb_find_all( req.db, COLL_USERS, query, UserKeys );
 
@@ -2386,7 +2389,7 @@ export const users_list = async ( req: ILRequest, query?: any, cback: LCback = n
  * @return : boolean
  *
  */
-export const user_db_init = async ( liwe: ILiWE, cback: LCback = null ): Promise<boolean> => {
+export const user_db_init = async ( liwe: ILiWE, ): Promise<boolean> => {
 	_liwe = liwe;
 
 	system_permissions_register( 'user', _module_perms );
@@ -2437,6 +2440,8 @@ export const user_db_init = async ( liwe: ILiWE, cback: LCback = null ): Promise
 
 	return _liwe.db;
 	/*=== f2c_end user_db_init ===*/
+
+	return true;
 };
 // }}}
 

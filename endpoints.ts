@@ -9,6 +9,8 @@ import { locale_load } from '../../liwe/locale';
 
 import { perms } from '../../liwe/auth';
 import { LiWEResponse, sendParametersError, sendResponse } from '../../liwe/response';
+import { z } from 'zod';
+import { zodParams } from '../../liwe/zod';
 
 import {
 	// endpoints function
@@ -34,7 +36,7 @@ import {
 } from './types';
 
 /*=== f2c_start __header ===*/
-import { SystemDomainPublic } from '../system/types';
+import { ZUserPerms } from './types';
 /*=== f2c_end __header ===*/
 
 export const init = ( liwe: ILiWE ) => {
@@ -45,566 +47,593 @@ export const init = ( liwe: ILiWE ) => {
 	liwe.cfg.app.languages.map( ( l ) => locale_load( "user", l ) );
 	user_db_init ( liwe );
 
-	app.post ( '/api/user/admin/add', perms( [ "user.create" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { email, password, username, name, lastname, perms, enabled, language, group, ___errors } = typed_dict( req.body, [
-			{ name: "email", type: "string", required: true },
-			{ name: "password", type: "string", required: true },
-			{ name: "username", type: "string", required: true },
-			{ name: "name", type: "string" },
-			{ name: "lastname", type: "string" },
-			{ name: "perms", type: "string[]" },
-			{ name: "enabled", type: "boolean" },
-			{ name: "language", type: "string" },
-			{ name: "group", type: "string" }
-		] );
+	app.post ( '/api/user/admin/add', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			email: z.string(),
+			password: z.string(),
+			username: z.string(),
+			name: z.string().optional(),
+			lastname: z.string().optional(),
+			perms: z.array( z.string() ).optional(),
+			enabled: z.boolean().optional(),
+			language: z.string().optional(),
+			group: z.string().optional(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { email, password, username, name, lastname, perms, enabled, language, group, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_admin_add ( req, email, password, username, name, lastname, perms, enabled, language, group);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.patch ( '/api/user/admin/update', perms( [ "user.create" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { id, email, password, name, lastname, enabled, level, language, ___errors } = typed_dict( req.body, [
-			{ name: "id", type: "string", required: true },
-			{ name: "email", type: "string" },
-			{ name: "password", type: "string" },
-			{ name: "name", type: "string" },
-			{ name: "lastname", type: "string" },
-			{ name: "enabled", type: "boolean" },
-			{ name: "level", type: "number" },
-			{ name: "language", type: "string" }
-		] );
+	app.patch ( '/api/user/admin/update', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			id: z.string(),
+			email: z.string().optional(),
+			password: z.string().optional(),
+			name: z.string().optional(),
+			lastname: z.string().optional(),
+			enabled: z.boolean().optional(),
+			level: z.number().optional(),
+			language: z.string().optional(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { id, email, password, name, lastname, enabled, level, language, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await patch_user_admin_update ( req, id, email, password, name, lastname, enabled, level, language);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.delete ( '/api/user/admin/del', perms( [ "user.create" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { id_user, ___errors } = typed_dict( req.body, [
-			{ name: "id_user", type: "string", required: true }
-		] );
+	app.delete ( '/api/user/admin/del', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			id_user: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { id_user, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await delete_user_admin_del ( req, id_user);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.patch ( '/api/user/admin/fields', perms( [ "user.create" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { id, data, ___errors } = typed_dict( req.body, [
-			{ name: "id", type: "string", required: true },
-			{ name: "data", type: "any", required: true }
-		] );
+	app.patch ( '/api/user/admin/fields', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			id: z.string(),
+			data: z.any(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { id, data, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await patch_user_admin_fields ( req, id, data);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/register',  async ( req: ILRequest, res: ILResponse ) => {
-		const { email, password, recaptcha, name, lastname, phone, username, group, ___errors } = typed_dict( req.body, [
-			{ name: "email", type: "string", required: true },
-			{ name: "password", type: "string", required: true },
-			{ name: "recaptcha", type: "string", required: true },
-			{ name: "name", type: "string" },
-			{ name: "lastname", type: "string" },
-			{ name: "phone", type: "string" },
-			{ name: "username", type: "string" },
-			{ name: "group", type: "string" }
-		] );
+	app.post ( '/api/user/register', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			email: z.string(),
+			password: z.string(),
+			recaptcha: z.string(),
+			name: z.string().optional(),
+			lastname: z.string().optional(),
+			phone: z.string().optional(),
+			username: z.string().optional(),
+			group: z.string().optional(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { email, password, recaptcha, name, lastname, phone, username, group, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_register ( req, email, password, recaptcha, name, lastname, phone, username, group);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.patch ( '/api/user/update', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { email, password, name, lastname, username, group, phone, ___errors } = typed_dict( req.body, [
-			{ name: "email", type: "string" },
-			{ name: "password", type: "string" },
-			{ name: "name", type: "string" },
-			{ name: "lastname", type: "string" },
-			{ name: "username", type: "string" },
-			{ name: "group", type: "string" },
-			{ name: "phone", type: "string" }
-		] );
+	app.patch ( '/api/user/update', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			email: z.string().optional(),
+			password: z.string().optional(),
+			name: z.string().optional(),
+			lastname: z.string().optional(),
+			username: z.string().optional(),
+			group: z.string().optional(),
+			phone: z.string().optional(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { email, password, name, lastname, username, group, phone, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await patch_user_update ( req, email, password, name, lastname, username, group, phone);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/avatar', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { avatar, ___errors } = typed_dict( req.body, [
-			{ name: "avatar", type: "File", required: true }
-		] );
+	app.post ( '/api/user/avatar', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			avatar: z.any(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { avatar, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_avatar ( req, avatar);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/password-forgot',  async ( req: ILRequest, res: ILResponse ) => {
-		const { email, recaptcha, ___errors } = typed_dict( req.body, [
-			{ name: "email", type: "string", required: true },
-			{ name: "recaptcha", type: "string", required: true }
-		] );
+	app.post ( '/api/user/password-forgot', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			email: z.string(),
+			recaptcha: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { email, recaptcha, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_password_forgot ( req, email, recaptcha);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/password-reset',  async ( req: ILRequest, res: ILResponse ) => {
-		const { email, code, password, ___errors } = typed_dict( req.body, [
-			{ name: "email", type: "string", required: true },
-			{ name: "code", type: "string", required: true },
-			{ name: "password", type: "string", required: true }
-		] );
+	app.post ( '/api/user/password-reset', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			email: z.string(),
+			code: z.string(),
+			password: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { email, code, password, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_password_reset ( req, email, code, password);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/register/activate/:code',  async ( req: ILRequest, res: ILResponse ) => {
-		const { code, ___errors } = typed_dict( req.params, [
-			{ name: "code", type: "string", required: true }
-		] );
+	app.get ( '/api/user/register/activate/:code', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			code: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { code, ___errors } = zodParams( schema, req.params );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await get_user_register_activate ( req, code);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/tag', perms( [ "user.tag", "user.create" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { id_user, tags, ___errors } = typed_dict( req.body, [
-			{ name: "id_user", type: "string", required: true },
-			{ name: "tags", type: "string[]", required: true }
-		] );
+	app.post ( '/api/user/tag', perms( [ "user.tag", "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			id_user: z.string(),
+			tags: z.array( z.string() ),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { id_user, tags, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_tag ( req, id_user, tags);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/token',  async ( req: ILRequest, res: ILResponse ) => {
-		const { username, password, ___errors } = typed_dict( req.body, [
-			{ name: "username", type: "string", required: true },
-			{ name: "password", type: "string", required: true }
-		] );
+	app.post ( '/api/user/token', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			username: z.string(),
+			password: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { username, password, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_token ( req, username, password);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/login',  async ( req: ILRequest, res: ILResponse ) => {
-		const { password, email, username, recaptcha, challenge, ___errors } = typed_dict( req.body, [
-			{ name: "password", type: "string", required: true },
-			{ name: "email", type: "string" },
-			{ name: "username", type: "string" },
-			{ name: "recaptcha", type: "string" },
-			{ name: "challenge", type: "string" }
-		] );
+	app.post ( '/api/user/login', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			password: z.string(),
+			email: z.string().optional(),
+			username: z.string().optional(),
+			recaptcha: z.string().optional(),
+			challenge: z.string().optional(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { password, email, username, recaptcha, challenge, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_login ( req, password, email, username, recaptcha, challenge);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/login/remote',  async ( req: ILRequest, res: ILResponse ) => {
-		const { email, name, challenge, avatar, ___errors } = typed_dict( req.body, [
-			{ name: "email", type: "string", required: true },
-			{ name: "name", type: "string", required: true },
-			{ name: "challenge", type: "string", required: true },
-			{ name: "avatar", type: "string" }
-		] );
+	app.post ( '/api/user/login/remote', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			email: z.string(),
+			name: z.string(),
+			challenge: z.string(),
+			avatar: z.string().optional(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { email, name, challenge, avatar, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_login_remote ( req, email, name, challenge, avatar);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/admin/list', perms( [ "user.create", "user.group_owner" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { tag, ___errors } = typed_dict( req.query as any, [
-			{ name: "tag", type: "string" }
-		] );
+	app.get ( '/api/user/admin/list', perms( [ "user.create", "user.group_owner" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			tag: z.string().optional(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { tag, ___errors } = zodParams( schema, req.query as any );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await get_user_admin_list ( req, tag);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/logout', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		
-
+	app.get ( '/api/user/logout', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
 		const response = await get_user_logout ( req, );
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/me', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		
-
+	app.get ( '/api/user/me', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
 		const response = await get_user_me ( req, );
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/perms_set', perms( [ "user.perms" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { id_user, perms, ___errors } = typed_dict( req.body, [
-			{ name: "id_user", type: "string", required: true },
-			{ name: "perms", type: "UserPerms", required: true }
-		] );
+	app.post ( '/api/user/perms_set', perms( [ "user.perms" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			id_user: z.string(),
+			perms: ZUserPerms,
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { id_user, perms, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_perms_set ( req, id_user, perms);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/info_add', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { key, data, ___errors } = typed_dict( req.body, [
-			{ name: "key", type: "string", required: true },
-			{ name: "data", type: "any", required: true }
-		] );
+	app.post ( '/api/user/info_add', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			key: z.string(),
+			data: z.any(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { key, data, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_info_add ( req, key, data);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.delete ( '/api/user/info_del', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { key, ___errors } = typed_dict( req.body, [
-			{ name: "key", type: "string", required: true }
-		] );
+	app.delete ( '/api/user/info_del', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			key: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { key, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await delete_user_info_del ( req, key);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.patch ( '/api/user/profile', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { name, lastname, phone, email, addr_street, addr_nr, addr_zip, addr_city, addr_state, addr_country, facebook, twitter, linkedin, instagram, website, ___errors } = typed_dict( req.body, [
-			{ name: "name", type: "string" },
-			{ name: "lastname", type: "string" },
-			{ name: "phone", type: "string" },
-			{ name: "email", type: "string" },
-			{ name: "addr_street", type: "string" },
-			{ name: "addr_nr", type: "string" },
-			{ name: "addr_zip", type: "string" },
-			{ name: "addr_city", type: "string" },
-			{ name: "addr_state", type: "string" },
-			{ name: "addr_country", type: "string" },
-			{ name: "facebook", type: "string" },
-			{ name: "twitter", type: "string" },
-			{ name: "linkedin", type: "string" },
-			{ name: "instagram", type: "string" },
-			{ name: "website", type: "string" }
-		] );
+	app.patch ( '/api/user/profile', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			name: z.string().optional(),
+			lastname: z.string().optional(),
+			phone: z.string().optional(),
+			email: z.string().optional(),
+			addr_street: z.string().optional(),
+			addr_nr: z.string().optional(),
+			addr_zip: z.string().optional(),
+			addr_city: z.string().optional(),
+			addr_state: z.string().optional(),
+			addr_country: z.string().optional(),
+			facebook: z.string().optional(),
+			twitter: z.string().optional(),
+			linkedin: z.string().optional(),
+			instagram: z.string().optional(),
+			website: z.string().optional(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { name, lastname, phone, email, addr_street, addr_nr, addr_zip, addr_city, addr_state, addr_country, facebook, twitter, linkedin, instagram, website, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await patch_user_profile ( req, name, lastname, phone, email, addr_street, addr_nr, addr_zip, addr_city, addr_state, addr_country, facebook, twitter, linkedin, instagram, website);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/test/create', perms( [ "user.create" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		
-
+	app.get ( '/api/user/test/create', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
 		const response = await get_user_test_create ( req, );
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.patch ( '/api/user/change/password', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { old_password, new_password, recaptcha, ___errors } = typed_dict( req.body, [
-			{ name: "old_password", type: "string", required: true },
-			{ name: "new_password", type: "string", required: true },
-			{ name: "recaptcha", type: "string", required: true }
-		] );
+	app.patch ( '/api/user/change/password', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			old_password: z.string(),
+			new_password: z.string(),
+			recaptcha: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { old_password, new_password, recaptcha, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await patch_user_change_password ( req, old_password, new_password, recaptcha);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.patch ( '/api/user/set/bio', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { tagline, bio, ___errors } = typed_dict( req.body, [
-			{ name: "tagline", type: "string" },
-			{ name: "bio", type: "string" }
-		] );
+	app.patch ( '/api/user/set/bio', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			tagline: z.string().optional(),
+			bio: z.string().optional(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { tagline, bio, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await patch_user_set_bio ( req, tagline, bio);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.patch ( '/api/user/set/billing', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { address, nr, name, city, zip, state, country, company_name, fiscal_code, vat_number, sdi, pec, ___errors } = typed_dict( req.body, [
-			{ name: "address", type: "string" },
-			{ name: "nr", type: "string" },
-			{ name: "name", type: "string" },
-			{ name: "city", type: "string" },
-			{ name: "zip", type: "string" },
-			{ name: "state", type: "string" },
-			{ name: "country", type: "string" },
-			{ name: "company_name", type: "string" },
-			{ name: "fiscal_code", type: "string" },
-			{ name: "vat_number", type: "string" },
-			{ name: "sdi", type: "string" },
-			{ name: "pec", type: "string" }
-		] );
+	app.patch ( '/api/user/set/billing', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			address: z.string().optional(),
+			nr: z.string().optional(),
+			name: z.string().optional(),
+			city: z.string().optional(),
+			zip: z.string().optional(),
+			state: z.string().optional(),
+			country: z.string().optional(),
+			company_name: z.string().optional(),
+			fiscal_code: z.string().optional(),
+			vat_number: z.string().optional(),
+			sdi: z.string().optional(),
+			pec: z.string().optional(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { address, nr, name, city, zip, state, country, company_name, fiscal_code, vat_number, sdi, pec, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await patch_user_set_billing ( req, address, nr, name, city, zip, state, country, company_name, fiscal_code, vat_number, sdi, pec);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/login/metamask',  async ( req: ILRequest, res: ILResponse ) => {
-		const { address, challenge, ___errors } = typed_dict( req.body, [
-			{ name: "address", type: "string", required: true },
-			{ name: "challenge", type: "string", required: true }
-		] );
+	app.post ( '/api/user/login/metamask', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			address: z.string(),
+			challenge: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { address, challenge, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_login_metamask ( req, address, challenge);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/admin/get', perms( [ "user.create" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { id, email, name, lastname, ___errors } = typed_dict( req.query as any, [
-			{ name: "id", type: "string" },
-			{ name: "email", type: "string" },
-			{ name: "name", type: "string" },
-			{ name: "lastname", type: "string" }
-		] );
+	app.get ( '/api/user/admin/get', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			id: z.string().optional(),
+			email: z.string().optional(),
+			name: z.string().optional(),
+			lastname: z.string().optional(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { id, email, name, lastname, ___errors } = zodParams( schema, req.query as any );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await get_user_admin_get ( req, id, email, name, lastname);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/remove/me', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		
-
+	app.get ( '/api/user/remove/me', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
 		const response = await get_user_remove_me ( req, );
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/perms/get', perms( [ "user.perms" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { id_user, ___errors } = typed_dict( req.query as any, [
-			{ name: "id_user", type: "string", required: true }
-		] );
+	app.get ( '/api/user/perms/get', perms( [ "user.perms" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			id_user: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { id_user, ___errors } = zodParams( schema, req.query as any );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await get_user_perms_get ( req, id_user);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/faces/get', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { id_user, ___errors } = typed_dict( req.query as any, [
-			{ name: "id_user", type: "string" }
-		] );
+	app.get ( '/api/user/faces/get', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			id_user: z.string().optional(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { id_user, ___errors } = zodParams( schema, req.query as any );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await get_user_faces_get ( req, id_user);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/upload2face', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { id_upload, id_user, ___errors } = typed_dict( req.body, [
-			{ name: "id_upload", type: "string", required: true },
-			{ name: "id_user", type: "string" }
-		] );
+	app.post ( '/api/user/upload2face', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			id_upload: z.string(),
+			id_user: z.string().optional(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { id_upload, id_user, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_upload2face ( req, id_upload, id_user);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/anonymous',  async ( req: ILRequest, res: ILResponse ) => {
-		const { ts, challenge, ___errors } = typed_dict( req.body, [
-			{ name: "ts", type: "string", required: true },
-			{ name: "challenge", type: "string", required: true }
-		] );
+	app.post ( '/api/user/anonymous', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			ts: z.string(),
+			challenge: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { ts, challenge, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_anonymous ( req, ts, challenge);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/register/app',  async ( req: ILRequest, res: ILResponse ) => {
-		const { email, password, challenge, name, lastname, phone, username, group, ___errors } = typed_dict( req.body, [
-			{ name: "email", type: "string", required: true },
-			{ name: "password", type: "string", required: true },
-			{ name: "challenge", type: "string", required: true },
-			{ name: "name", type: "string" },
-			{ name: "lastname", type: "string" },
-			{ name: "phone", type: "string" },
-			{ name: "username", type: "string" },
-			{ name: "group", type: "string" }
-		] );
+	app.post ( '/api/user/register/app', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			email: z.string(),
+			password: z.string(),
+			challenge: z.string(),
+			name: z.string().optional(),
+			lastname: z.string().optional(),
+			phone: z.string().optional(),
+			username: z.string().optional(),
+			group: z.string().optional(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { email, password, challenge, name, lastname, phone, username, group, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_register_app ( req, email, password, challenge, name, lastname, phone, username, group);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/find', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { search, ___errors } = typed_dict( req.query as any, [
-			{ name: "search", type: "string" }
-		] );
+	app.get ( '/api/user/find', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			search: z.string().optional(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { search, ___errors } = zodParams( schema, req.query as any );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await get_user_find ( req, search);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/password-forgot/app',  async ( req: ILRequest, res: ILResponse ) => {
-		const { username, challenge, ___errors } = typed_dict( req.body, [
-			{ name: "username", type: "string", required: true },
-			{ name: "challenge", type: "string", required: true }
-		] );
+	app.post ( '/api/user/password-forgot/app', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			username: z.string(),
+			challenge: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { username, challenge, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_password_forgot_app ( req, username, challenge);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/del/app', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { id_user, username, challenge, ___errors } = typed_dict( req.body, [
-			{ name: "id_user", type: "string", required: true },
-			{ name: "username", type: "string", required: true },
-			{ name: "challenge", type: "string", required: true }
-		] );
+	app.post ( '/api/user/del/app', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			id_user: z.string(),
+			username: z.string(),
+			challenge: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { id_user, username, challenge, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_del_app ( req, id_user, username, challenge);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/2fa/start', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		
-
+	app.get ( '/api/user/2fa/start', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
 		const response = await get_user_2fa_start ( req, );
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/login/2fa',  async ( req: ILRequest, res: ILResponse ) => {
-		const { id, code, nonce, ___errors } = typed_dict( req.body, [
-			{ name: "id", type: "string", required: true },
-			{ name: "code", type: "string", required: true },
-			{ name: "nonce", type: "string", required: true }
-		] );
+	app.post ( '/api/user/login/2fa', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			id: z.string(),
+			code: z.string(),
+			nonce: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { id, code, nonce, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_login_2fa ( req, id, code, nonce);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/2fa/verify', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { code, ___errors } = typed_dict( req.body, [
-			{ name: "code", type: "string", required: true }
-		] );
+	app.post ( '/api/user/2fa/verify', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			code: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { code, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_2fa_verify ( req, code);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/admin/change/password', perms( [ "user.password" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { id_user, password, ___errors } = typed_dict( req.body, [
-			{ name: "id_user", type: "string", required: true },
-			{ name: "password", type: "string", required: true }
-		] );
+	app.post ( '/api/user/admin/change/password', perms( [ "user.password" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			id_user: z.string(),
+			password: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { id_user, password, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_admin_change_password ( req, id_user, password);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/admin/relogin', perms( [ "user.change_identity" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { id_user, ___errors } = typed_dict( req.body, [
-			{ name: "id_user", type: "string", required: true }
-		] );
+	app.post ( '/api/user/admin/relogin', perms( [ "user.change_identity" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			id_user: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { id_user, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_admin_relogin ( req, id_user);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/domain/invitation/accept', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { invitation, ___errors } = typed_dict( req.query as any, [
-			{ name: "invitation", type: "string", required: true }
-		] );
+	app.get ( '/api/user/domain/invitation/accept', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			invitation: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { invitation, ___errors } = zodParams( schema, req.query as any );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await get_user_domain_invitation_accept ( req, invitation);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/domains/list', perms( [ "is-logged" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		
-
+	app.get ( '/api/user/domains/list', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
 		const response = await get_user_domains_list ( req, );
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/login/refresh',  async ( req: ILRequest, res: ILResponse ) => {
-		const { token, ___errors } = typed_dict( req.body, [
-			{ name: "token", type: "string", required: true }
-		] );
+	app.post ( '/api/user/login/refresh', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			token: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { token, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_login_refresh ( req, token);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/domain/set', perms( [ "user.domain" ] ),  async ( req: ILRequest, res: ILResponse ) => {
-		const { id, code, ___errors } = typed_dict( req.body, [
-			{ name: "id", type: "string", required: true },
-			{ name: "code", type: "string", required: true }
-		] );
+	app.post ( '/api/user/domain/set', perms( [ "user.domain" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object({
+			id: z.string(),
+			code: z.string(),
+		});
 
-		if ( ___errors.length ) return sendParametersError ( res, ___errors );
+		const { id, code, ___errors } = zodParams( schema, req.body );
+		if ( ___errors ) return sendResponse( res, ___errors );
 
 		const response = await post_user_domain_set ( req, id, code);
-		sendResponse ( res, response );
+		sendResponse( res, response );
 	} );
 
 };
