@@ -45,10 +45,10 @@ export const init = ( liwe: ILiWE ) => {
 	console.log( "    - user " );
 
 	liwe.cfg.app.languages.map( ( l ) => locale_load( "user", l ) );
-	user_db_init ( liwe );
+	user_db_init( liwe );
 
-	app.post ( '/api/user/admin/add', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/admin/add', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			email: z.string(),
 			password: z.string(),
 			username: z.string(),
@@ -58,17 +58,17 @@ export const init = ( liwe: ILiWE ) => {
 			enabled: z.boolean().optional(),
 			language: z.string().optional(),
 			group: z.string().optional(),
-		});
+		} );
 
 		const { email, password, username, name, lastname, perms, enabled, language, group, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_admin_add ( req, email, password, username, name, lastname, perms, enabled, language, group);
+		const response = await post_user_admin_add( req, email, password, username, name, lastname, perms, enabled, language, group );
 		sendResponse( res, response );
 	} );
 
-	app.patch ( '/api/user/admin/update', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.patch( '/api/user/admin/update', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			id: z.string(),
 			email: z.string().optional(),
 			password: z.string().optional(),
@@ -77,42 +77,42 @@ export const init = ( liwe: ILiWE ) => {
 			enabled: z.boolean().optional(),
 			level: z.number().optional(),
 			language: z.string().optional(),
-		});
+		} );
 
 		const { id, email, password, name, lastname, enabled, level, language, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await patch_user_admin_update ( req, id, email, password, name, lastname, enabled, level, language);
+		const response = await patch_user_admin_update( req, id, email, password, name, lastname, enabled, level, language );
 		sendResponse( res, response );
 	} );
 
-	app.delete ( '/api/user/admin/del', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.delete( '/api/user/admin/del', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			id_user: z.string(),
-		});
+		} );
 
 		const { id_user, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await delete_user_admin_del ( req, id_user);
+		const response = await delete_user_admin_del( req, id_user );
 		sendResponse( res, response );
 	} );
 
-	app.patch ( '/api/user/admin/fields', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.patch( '/api/user/admin/fields', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			id: z.string(),
 			data: z.any(),
-		});
+		} );
 
 		const { id, data, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await patch_user_admin_fields ( req, id, data);
+		const response = await patch_user_admin_fields( req, id, data );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/register', async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/register', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			email: z.string(),
 			password: z.string(),
 			recaptcha: z.string(),
@@ -121,17 +121,17 @@ export const init = ( liwe: ILiWE ) => {
 			phone: z.string().optional(),
 			username: z.string().optional(),
 			group: z.string().optional(),
-		});
+		} );
 
 		const { email, password, recaptcha, name, lastname, phone, username, group, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_register ( req, email, password, recaptcha, name, lastname, phone, username, group);
+		const response = await post_user_register( req, email, password, recaptcha, name, lastname, phone, username, group );
 		sendResponse( res, response );
 	} );
 
-	app.patch ( '/api/user/update', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.patch( '/api/user/update', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			email: z.string().optional(),
 			password: z.string().optional(),
 			name: z.string().optional(),
@@ -139,185 +139,185 @@ export const init = ( liwe: ILiWE ) => {
 			username: z.string().optional(),
 			group: z.string().optional(),
 			phone: z.string().optional(),
-		});
+		} );
 
 		const { email, password, name, lastname, username, group, phone, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await patch_user_update ( req, email, password, name, lastname, username, group, phone);
+		const response = await patch_user_update( req, email, password, name, lastname, username, group, phone );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/avatar', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/avatar', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			avatar: z.any(),
-		});
+		} );
 
 		const { avatar, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_avatar ( req, avatar);
+		const response = await post_user_avatar( req, avatar );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/password-forgot', async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/password-forgot', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			email: z.string(),
 			recaptcha: z.string(),
-		});
+		} );
 
 		const { email, recaptcha, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_password_forgot ( req, email, recaptcha);
+		const response = await post_user_password_forgot( req, email, recaptcha );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/password-reset', async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/password-reset', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			email: z.string(),
 			code: z.string(),
 			password: z.string(),
-		});
+		} );
 
 		const { email, code, password, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_password_reset ( req, email, code, password);
+		const response = await post_user_password_reset( req, email, code, password );
 		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/register/activate/:code', async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.get( '/api/user/register/activate/:code', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			code: z.string(),
-		});
+		} );
 
 		const { code, ___errors } = zodParams( schema, req.params );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await get_user_register_activate ( req, code);
+		const response = await get_user_register_activate( req, code );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/tag', perms( [ "user.tag", "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/tag', perms( [ "user.tag", "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			id_user: z.string(),
 			tags: z.array( z.string() ),
-		});
+		} );
 
 		const { id_user, tags, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_tag ( req, id_user, tags);
+		const response = await post_user_tag( req, id_user, tags );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/token', async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/token', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			username: z.string(),
 			password: z.string(),
-		});
+		} );
 
 		const { username, password, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_token ( req, username, password);
+		const response = await post_user_token( req, username, password );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/login', async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/login', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			password: z.string(),
 			email: z.string().optional(),
 			username: z.string().optional(),
 			recaptcha: z.string().optional(),
 			challenge: z.string().optional(),
-		});
+		} );
 
 		const { password, email, username, recaptcha, challenge, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_login ( req, password, email, username, recaptcha, challenge);
+		const response = await post_user_login( req, password, email, username, recaptcha, challenge );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/login/remote', async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/login/remote', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			email: z.string(),
 			name: z.string(),
 			challenge: z.string(),
 			avatar: z.string().optional(),
-		});
+		} );
 
 		const { email, name, challenge, avatar, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_login_remote ( req, email, name, challenge, avatar);
+		const response = await post_user_login_remote( req, email, name, challenge, avatar );
 		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/admin/list', perms( [ "user.create", "user.group_owner" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.get( '/api/user/admin/list', perms( [ "user.create", "user.group_owner" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			tag: z.string().optional(),
-		});
+		} );
 
 		const { tag, ___errors } = zodParams( schema, req.query as any );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await get_user_admin_list ( req, tag);
+		const response = await get_user_admin_list( req, tag );
 		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/logout', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const response = await get_user_logout ( req, );
+	app.get( '/api/user/logout', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const response = await get_user_logout( req, );
 		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/me', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const response = await get_user_me ( req, );
+	app.get( '/api/user/me', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const response = await get_user_me( req, );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/perms_set', perms( [ "user.perms" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/perms_set', perms( [ "user.perms" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			id_user: z.string(),
-			perms: ZUserPerms,
-		});
+			perms: z.array( z.string() ),
+		} );
 
 		const { id_user, perms, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_perms_set ( req, id_user, perms);
+		const response = await post_user_perms_set( req, id_user, perms );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/info_add', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/info_add', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			key: z.string(),
 			data: z.any(),
-		});
+		} );
 
 		const { key, data, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_info_add ( req, key, data);
+		const response = await post_user_info_add( req, key, data );
 		sendResponse( res, response );
 	} );
 
-	app.delete ( '/api/user/info_del', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.delete( '/api/user/info_del', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			key: z.string(),
-		});
+		} );
 
 		const { key, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await delete_user_info_del ( req, key);
+		const response = await delete_user_info_del( req, key );
 		sendResponse( res, response );
 	} );
 
-	app.patch ( '/api/user/profile', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.patch( '/api/user/profile', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			name: z.string().optional(),
 			lastname: z.string().optional(),
 			phone: z.string().optional(),
@@ -333,49 +333,49 @@ export const init = ( liwe: ILiWE ) => {
 			linkedin: z.string().optional(),
 			instagram: z.string().optional(),
 			website: z.string().optional(),
-		});
+		} );
 
 		const { name, lastname, phone, email, addr_street, addr_nr, addr_zip, addr_city, addr_state, addr_country, facebook, twitter, linkedin, instagram, website, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await patch_user_profile ( req, name, lastname, phone, email, addr_street, addr_nr, addr_zip, addr_city, addr_state, addr_country, facebook, twitter, linkedin, instagram, website);
+		const response = await patch_user_profile( req, name, lastname, phone, email, addr_street, addr_nr, addr_zip, addr_city, addr_state, addr_country, facebook, twitter, linkedin, instagram, website );
 		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/test/create', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const response = await get_user_test_create ( req, );
+	app.get( '/api/user/test/create', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const response = await get_user_test_create( req, );
 		sendResponse( res, response );
 	} );
 
-	app.patch ( '/api/user/change/password', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.patch( '/api/user/change/password', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			old_password: z.string(),
 			new_password: z.string(),
 			recaptcha: z.string(),
-		});
+		} );
 
 		const { old_password, new_password, recaptcha, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await patch_user_change_password ( req, old_password, new_password, recaptcha);
+		const response = await patch_user_change_password( req, old_password, new_password, recaptcha );
 		sendResponse( res, response );
 	} );
 
-	app.patch ( '/api/user/set/bio', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.patch( '/api/user/set/bio', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			tagline: z.string().optional(),
 			bio: z.string().optional(),
-		});
+		} );
 
 		const { tagline, bio, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await patch_user_set_bio ( req, tagline, bio);
+		const response = await patch_user_set_bio( req, tagline, bio );
 		sendResponse( res, response );
 	} );
 
-	app.patch ( '/api/user/set/billing', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.patch( '/api/user/set/billing', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			address: z.string().optional(),
 			nr: z.string().optional(),
 			name: z.string().optional(),
@@ -388,100 +388,100 @@ export const init = ( liwe: ILiWE ) => {
 			vat_number: z.string().optional(),
 			sdi: z.string().optional(),
 			pec: z.string().optional(),
-		});
+		} );
 
 		const { address, nr, name, city, zip, state, country, company_name, fiscal_code, vat_number, sdi, pec, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await patch_user_set_billing ( req, address, nr, name, city, zip, state, country, company_name, fiscal_code, vat_number, sdi, pec);
+		const response = await patch_user_set_billing( req, address, nr, name, city, zip, state, country, company_name, fiscal_code, vat_number, sdi, pec );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/login/metamask', async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/login/metamask', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			address: z.string(),
 			challenge: z.string(),
-		});
+		} );
 
 		const { address, challenge, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_login_metamask ( req, address, challenge);
+		const response = await post_user_login_metamask( req, address, challenge );
 		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/admin/get', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.get( '/api/user/admin/get', perms( [ "user.create" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			id: z.string().optional(),
 			email: z.string().optional(),
 			name: z.string().optional(),
 			lastname: z.string().optional(),
-		});
+		} );
 
 		const { id, email, name, lastname, ___errors } = zodParams( schema, req.query as any );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await get_user_admin_get ( req, id, email, name, lastname);
+		const response = await get_user_admin_get( req, id, email, name, lastname );
 		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/remove/me', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const response = await get_user_remove_me ( req, );
+	app.get( '/api/user/remove/me', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const response = await get_user_remove_me( req, );
 		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/perms/get', perms( [ "user.perms" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.get( '/api/user/perms/get', perms( [ "user.perms" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			id_user: z.string(),
-		});
+		} );
 
 		const { id_user, ___errors } = zodParams( schema, req.query as any );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await get_user_perms_get ( req, id_user);
+		const response = await get_user_perms_get( req, id_user );
 		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/faces/get', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.get( '/api/user/faces/get', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			id_user: z.string().optional(),
-		});
+		} );
 
 		const { id_user, ___errors } = zodParams( schema, req.query as any );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await get_user_faces_get ( req, id_user);
+		const response = await get_user_faces_get( req, id_user );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/upload2face', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/upload2face', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			id_upload: z.string(),
 			id_user: z.string().optional(),
-		});
+		} );
 
 		const { id_upload, id_user, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_upload2face ( req, id_upload, id_user);
+		const response = await post_user_upload2face( req, id_upload, id_user );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/anonymous', async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/anonymous', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			ts: z.string(),
 			challenge: z.string(),
-		});
+		} );
 
 		const { ts, challenge, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_anonymous ( req, ts, challenge);
+		const response = await post_user_anonymous( req, ts, challenge );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/register/app', async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/register/app', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			email: z.string(),
 			password: z.string(),
 			challenge: z.string(),
@@ -490,149 +490,149 @@ export const init = ( liwe: ILiWE ) => {
 			phone: z.string().optional(),
 			username: z.string().optional(),
 			group: z.string().optional(),
-		});
+		} );
 
 		const { email, password, challenge, name, lastname, phone, username, group, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_register_app ( req, email, password, challenge, name, lastname, phone, username, group);
+		const response = await post_user_register_app( req, email, password, challenge, name, lastname, phone, username, group );
 		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/find', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.get( '/api/user/find', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			search: z.string().optional(),
-		});
+		} );
 
 		const { search, ___errors } = zodParams( schema, req.query as any );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await get_user_find ( req, search);
+		const response = await get_user_find( req, search );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/password-forgot/app', async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/password-forgot/app', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			username: z.string(),
 			challenge: z.string(),
-		});
+		} );
 
 		const { username, challenge, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_password_forgot_app ( req, username, challenge);
+		const response = await post_user_password_forgot_app( req, username, challenge );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/del/app', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/del/app', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			id_user: z.string(),
 			username: z.string(),
 			challenge: z.string(),
-		});
+		} );
 
 		const { id_user, username, challenge, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_del_app ( req, id_user, username, challenge);
+		const response = await post_user_del_app( req, id_user, username, challenge );
 		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/2fa/start', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const response = await get_user_2fa_start ( req, );
+	app.get( '/api/user/2fa/start', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const response = await get_user_2fa_start( req, );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/login/2fa', async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/login/2fa', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			id: z.string(),
 			code: z.string(),
 			nonce: z.string(),
-		});
+		} );
 
 		const { id, code, nonce, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_login_2fa ( req, id, code, nonce);
+		const response = await post_user_login_2fa( req, id, code, nonce );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/2fa/verify', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/2fa/verify', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			code: z.string(),
-		});
+		} );
 
 		const { code, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_2fa_verify ( req, code);
+		const response = await post_user_2fa_verify( req, code );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/admin/change/password', perms( [ "user.password" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/admin/change/password', perms( [ "user.password" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			id_user: z.string(),
 			password: z.string(),
-		});
+		} );
 
 		const { id_user, password, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_admin_change_password ( req, id_user, password);
+		const response = await post_user_admin_change_password( req, id_user, password );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/admin/relogin', perms( [ "user.change_identity" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/admin/relogin', perms( [ "user.change_identity" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			id_user: z.string(),
-		});
+		} );
 
 		const { id_user, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_admin_relogin ( req, id_user);
+		const response = await post_user_admin_relogin( req, id_user );
 		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/domain/invitation/accept', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.get( '/api/user/domain/invitation/accept', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			invitation: z.string(),
-		});
+		} );
 
 		const { invitation, ___errors } = zodParams( schema, req.query as any );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await get_user_domain_invitation_accept ( req, invitation);
+		const response = await get_user_domain_invitation_accept( req, invitation );
 		sendResponse( res, response );
 	} );
 
-	app.get ( '/api/user/domains/list', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const response = await get_user_domains_list ( req, );
+	app.get( '/api/user/domains/list', perms( [ "is-logged" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const response = await get_user_domains_list( req, );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/login/refresh', async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/login/refresh', async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			token: z.string(),
-		});
+		} );
 
 		const { token, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_login_refresh ( req, token);
+		const response = await post_user_login_refresh( req, token );
 		sendResponse( res, response );
 	} );
 
-	app.post ( '/api/user/domain/set', perms( [ "user.domain" ] ), async ( req: ILRequest, res: ILResponse ) => {
-		const schema = z.object({
+	app.post( '/api/user/domain/set', perms( [ "user.domain" ] ), async ( req: ILRequest, res: ILResponse ) => {
+		const schema = z.object( {
 			id: z.string(),
 			code: z.string(),
-		});
+		} );
 
 		const { id, code, ___errors } = zodParams( schema, req.body );
 		if ( ___errors ) return sendResponse( res, ___errors );
 
-		const response = await post_user_domain_set ( req, id, code);
+		const response = await post_user_domain_set( req, id, code );
 		sendResponse( res, response );
 	} );
 

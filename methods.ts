@@ -1245,7 +1245,7 @@ export const get_user_me = async ( req: ILRequest, ): Promise<LiWEResponse<User>
  * @return ok: boolean
  *
  */
-export const post_user_perms_set = async ( req: ILRequest, id_user: string, perms: UserPerms ): Promise<LiWEResponse<boolean>> => {
+export const post_user_perms_set = async ( req: ILRequest, id_user: string, perms: string[] ): Promise<LiWEResponse<boolean>> => {
 	/*=== f2c_start post_user_perms_set ===*/
 	const user = await user_get( id_user );
 	const err = { message: _( 'User not found' ) };
