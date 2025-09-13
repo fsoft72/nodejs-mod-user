@@ -6,40 +6,40 @@ import { zodMeta, zodKeys } from '../../liwe/zod';
 import { Address } from '../address/types';
 /*=== f2c_end __file ===*/
 /** UserRegistration */
-export const ZUserRegistration = z.object({
+export const ZUserRegistration = z.object( {
 	email: zodMeta( z.string().describe( 'The user email' ), { priv: false } ),
 	password: zodMeta( z.string().describe( 'The user password' ), { priv: false } ),
 	name: zodMeta( z.string().optional().describe( 'User first name' ), { priv: false } ),
 	lastname: zodMeta( z.string().optional().describe( 'User lastname' ), { priv: false } ),
-});
+} );
 
 export type UserRegistration = z.infer<typeof ZUserRegistration>;
 export const UserRegistrationKeys = zodKeys( ZUserRegistration );
 
 /** UserActivationCode */
-export const ZUserActivationCode = z.object({
+export const ZUserActivationCode = z.object( {
 	code: zodMeta( z.string().optional().describe( 'Temporary code to complete action' ), { priv: false } ),
 	email: zodMeta( z.string().optional().describe( 'The user email' ), { priv: false } ),
-});
+} );
 
 export type UserActivationCode = z.infer<typeof ZUserActivationCode>;
 export const UserActivationCodeKeys = zodKeys( ZUserActivationCode );
 
 /** UserFaceRec */
-export const ZUserFaceRec = z.object({
+export const ZUserFaceRec = z.object( {
 	id: zodMeta( z.string().describe( 'the main id field' ), { priv: false } ),
 	domain: zodMeta( z.string().optional().describe( 'The domain code' ), { priv: true } ),
 	id_user: zodMeta( z.string().optional().describe( 'The user id' ), { priv: false } ),
 	id_upload: zodMeta( z.string().optional().describe( 'The upload image id' ), { priv: false } ),
 	filename: zodMeta( z.string().optional().describe( 'The upload file name' ), { priv: false } ),
 	path: zodMeta( z.string().optional().describe( 'The upload path' ), { priv: false } ),
-});
+} );
 
 export type UserFaceRec = z.infer<typeof ZUserFaceRec>;
 export const UserFaceRecKeys = zodKeys( ZUserFaceRec );
 
 /** User */
-export const ZUser = z.object({
+export const ZUser = z.object( {
 	id: zodMeta( z.string().optional().describe( 'the main id field' ), { priv: false } ),
 	domain: zodMeta( z.string().optional().describe( 'The domain code' ), { priv: false } ),
 	email: zodMeta( z.string().optional().describe( 'The user email' ), { priv: false } ),
@@ -71,84 +71,85 @@ export const ZUser = z.object({
 	group: zodMeta( z.string().optional().describe( 'The user group' ), { priv: false } ),
 	privacy: zodMeta( z.string().datetime().optional().describe( 'When the user signed the privacy checkbox' ), { priv: false } ),
 	refresh_token: zodMeta( z.string().optional().describe( 'The refresh token' ), { priv: false } ),
-});
+} );
 
 export type User = z.infer<typeof ZUser>;
 export const UserKeys = zodKeys( ZUser );
 
 /** UserSessionData */
-export const ZUserSessionData = z.object({
+export const ZUserSessionData = z.object( {
 	id: zodMeta( z.string().describe( 'the main id field' ), { priv: false } ),
 	access_token: zodMeta( z.string().optional().describe( 'The JWT access token' ), { priv: false } ),
 	name: zodMeta( z.string().optional().describe( 'The user name' ), { priv: false } ),
 	lastname: zodMeta( z.string().optional().describe( 'The user lastname' ), { priv: false } ),
 	avatar: zodMeta( z.string().optional().describe( 'The user avatar URL' ), { priv: false } ),
-	token_type: zodMeta( z.string().optional().describe( 'The token type (defaults to Bearer)' ), { priv: false } ),
+	// token_type: zodMeta( z.string().optional().describe( 'The token type (defaults to Bearer)' ), { priv: false } ),
 	perms: zodMeta( z.any().optional().describe( 'Array of user perms' ), { priv: false } ),
 	email: zodMeta( z.string().optional().describe( 'The user email' ), { priv: false } ),
 	id_user: zodMeta( z.string(), { priv: false } ),
-	nonce: zodMeta( z.string().optional().describe( 'The Nonce used for 2FA' ), { priv: false } ),
+	// nonce: zodMeta( z.string().optional().describe( 'The Nonce used for 2FA' ), { priv: false } ),
 	group: zodMeta( z.string().optional().describe( 'The user group' ), { priv: false } ),
 	username: zodMeta( z.string().optional().describe( 'The user username' ), { priv: false } ),
 	refresh_token: zodMeta( z.string().optional().describe( 'The refresh token' ), { priv: false } ),
-});
+	domain: zodMeta( z.string().optional().describe( 'The user domain' ), { priv: false } ),
+} );
 
 export type UserSessionData = z.infer<typeof ZUserSessionData>;
 export const UserSessionDataKeys = zodKeys( ZUserSessionData );
 
 /** UserPerms */
-export const ZUserPerms = z.object({
+export const ZUserPerms = z.object( {
 	module_name: zodMeta( z.string().optional().describe( 'The module name of the permissions' ), { priv: false } ),
 	permissions: zodMeta( z.array( z.string() ).optional().describe( 'The list of permissions for the given module' ), { priv: false } ),
-});
+} );
 
 export type UserPerms = z.infer<typeof ZUserPerms>;
 export const UserPermsKeys = zodKeys( ZUserPerms );
 
 /** UserDetails */
-export const ZUserDetails = z.object({
+export const ZUserDetails = z.object( {
 	id: zodMeta( z.string().describe( 'the main id field' ), { priv: false } ),
 	username: zodMeta( z.string(), { priv: false } ),
 	name: zodMeta( z.string().optional().describe( 'User name' ), { priv: false } ),
 	lastname: zodMeta( z.string().optional().describe( 'User lastname' ), { priv: false } ),
 	email: zodMeta( z.string().optional().describe( 'User email' ), { priv: false } ),
 	avatar: zodMeta( z.string().optional().describe( 'User avatar path' ), { priv: false } ),
-});
+} );
 
 export type UserDetails = z.infer<typeof ZUserDetails>;
 export const UserDetailsKeys = zodKeys( ZUserDetails );
 
 /** User2FA */
-export const ZUser2FA = z.object({
+export const ZUser2FA = z.object( {
 	id_user: zodMeta( z.string().describe( 'The ID User' ), { priv: false } ),
 	twofactor: zodMeta( z.string().optional().describe( 'The 2FA code' ), { priv: false } ),
 	enabled: zodMeta( z.boolean().optional().describe( 'If T, twofactor is enabled' ), { priv: false } ),
 	nonce: zodMeta( z.string().optional().describe( 'The nonce code' ), { priv: false } ),
-});
+} );
 
 export type User2FA = z.infer<typeof ZUser2FA>;
 export const User2FAKeys = zodKeys( ZUser2FA );
 
 /** UserSmall */
-export const ZUserSmall = z.object({
+export const ZUserSmall = z.object( {
 	id: zodMeta( z.string().describe( 'the main id field' ), { priv: false } ),
 	domain: zodMeta( z.string().describe( 'The user domain' ), { priv: false } ),
 	name: zodMeta( z.string().describe( 'The user first name' ), { priv: false } ),
 	lastname: zodMeta( z.string().describe( 'The user lastname' ), { priv: false } ),
 	username: zodMeta( z.string().describe( 'The user username' ), { priv: false } ),
 	email: zodMeta( z.string().describe( 'The user email' ), { priv: false } ),
-});
+} );
 
 export type UserSmall = z.infer<typeof ZUserSmall>;
 export const UserSmallKeys = zodKeys( ZUserSmall );
 
 /** UserDomain */
-export const ZUserDomain = z.object({
+export const ZUserDomain = z.object( {
 	id_user: zodMeta( z.string().describe( 'the main id field' ), { priv: false } ),
 	id_domain: zodMeta( z.string().describe( 'The domain ID' ), { priv: false } ),
 	name: zodMeta( z.string().describe( 'The domain name' ), { priv: false } ),
 	preferred: zodMeta( z.boolean().describe( 'If T, this is the preferred domain' ), { priv: false } ),
-});
+} );
 
 export type UserDomain = z.infer<typeof ZUserDomain>;
 export const UserDomainKeys = zodKeys( ZUserDomain );

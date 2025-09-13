@@ -282,7 +282,7 @@ const _create_user_session = async ( req: ILRequest, user: User, twoFANounce = '
 	const resp: UserSessionData = {
 		access_token: tok,
 		refresh_token: user.refresh_token,
-		token_type: 'bearer',
+		// token_type: 'bearer',
 		email: user.email,
 		name: user.name,
 		lastname: user.lastname,
@@ -291,8 +291,9 @@ const _create_user_session = async ( req: ILRequest, user: User, twoFANounce = '
 		avatar: user.avatar,
 		perms: user.perms,
 		group: user.group,
-		nonce: null,
+		// nonce: null,
 		id_user: user.id,
+		domain: user.domain,
 	};
 
 	return resp;
@@ -998,7 +999,7 @@ export const post_user_token = async ( req: ILRequest, username: string, passwor
 		id_user: u.id,
 		access_token: tok,
 		refresh_token: u.refresh_token,
-		token_type: 'bearer',
+		// token_type: 'bearer',
 	};
 
 	return responseSuccess( resp );
